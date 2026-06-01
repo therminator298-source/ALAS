@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Calendario Tareas — ALAS</title>
+  <meta name="description" content="Calendario Tareas ALAS - Gestión de actividades">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ALAS">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+  
+  
+  
+
+  <style>
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #0b1120 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.4s ease;
+    }
+    .custom-loader-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+    .custom-loader-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: custom-float 2.5s ease-in-out infinite;
+    }
+    .custom-loader-icon svg {
+      width: 30px;
+      height: 30px;
+    }
+    .custom-loader-line {
+      width: 90px;
+      height: 2px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .custom-loader-line::before {
+      content: "";
+      position: absolute;
+      left: -40%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, #60a5fa, #fff);
+      border-radius: 999px;
+      animation: custom-loading 1.2s ease infinite;
+    }
+    .custom-loader-text {
+      color: rgba(255,255,255,0.55);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+    }
+    .custom-loader-detail {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      margin-top: 2px;
+      max-width: 260px;
+    }
+    @keyframes custom-loading {
+      0% { left: -40%; }
+      100% { left: 120%; }
+    }
+    @keyframes custom-float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+  </style>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <link rel="stylesheet" href="styles.7ed3aaaa.min.css">
+</head>
+
+<body>
+  <div id="loader">
+    <div class="custom-loader-box">
+      <div class="custom-loader-icon">
+        <svg fill="none" stroke="white" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V10l7 4V10l7 4v7M9 21v-3m6 3v-3"/>
+        </svg>
+      </div>
+      <div class="custom-loader-line"></div>
+      <div class="custom-loader-text" id="loaderTitle">Iniciando sistema</div>
+      <div class="custom-loader-detail" id="loaderDetail"></div>
+    </div>
+  </div>
+
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      
+      <div class="login-brand-wrap">
+        <img class="login-brand" src="assets/logo.jpeg" onerror="this.style.display='none';" alt="ALAS Logo">
+      </div>
+
+      <h2 class="login-title"><span>ACCESO</span><span>CALENDARIO TAREAS ALAS</span></h2>
+      <p class="login-subtitle">Selecciona tu identidad para continuar</p>
+      
+      <div class="login-field" id="loginUserCustomContainer">
+        <select id="loginUserNative" class="login-user-native" aria-label="Seleccionar usuario">
+          <option value="">Seleccionar identidad...</option>
+        </select>
+        <button id="loginUserDisplay" class="login-user-display" onclick="toggleLoginSelect()" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="login-user-display-main">
+            <span id="loginUserAvatarSlot" class="login-user-display-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
+            <span id="loginUserSelectedText" class="login-user-display-text">Seleccionar identidad...</span>
+          </span>
+          <span class="login-user-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <div id="loginUserDropdown" class="login-user-modal" role="dialog" aria-modal="true" aria-labelledby="loginUserModalTitle" onclick="if (event.target === this) setLoginSelectOpen(false)">
+          <div class="login-user-modal-dialog">
+            <div class="login-user-modal-head">
+              <div class="login-user-modal-copy">
+                <span class="login-user-modal-eyebrow">Acceso</span>
+                <h3 id="loginUserModalTitle" class="login-user-modal-title">Selecciona tu usuario</h3>
+                <p class="login-user-modal-text">Elige tu identidad para continuar al calendario.</p>
+              </div>
+              <button type="button" class="login-user-modal-close" onclick="setLoginSelectOpen(false)" aria-label="Cerrar selector de usuarios">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+              </button>
+            </div>
+            <div class="login-user-search-wrap">
+              <input type="text" id="loginUserSearch" class="login-user-search" placeholder="Buscar usuario..." autocomplete="off" spellcheck="false">
+            </div>
+            <div id="loginUserList" class="login-user-list" role="listbox" aria-label="Usuarios disponibles"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="loginPinContainer" class="login-pin-container">
+        <input type="password" id="loginPin" class="login-pin-input" placeholder="0000" inputmode="numeric" autocomplete="current-password">
+      </div>
+      <div id="loginPinStatus" class="login-pin-status" aria-live="polite"></div>
+      
+      <button id="loginSubmitBtn" class="login-submit-btn" onclick="doLogin()" type="button">
+        <span class="login-submit-spinner" aria-hidden="true"></span>
+        <span id="loginSubmitLabel">Ingresar</span>
+      </button>
+      <div id="loginError" class="login-error" role="alert"></div>
+    </div>
+  </div>
+
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-wrap">
+        <img src="assets/logo_alas_blanco.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" alt="ALAS Logo" class="sidebar-logo-img">
+        <span style="display:none; color:#fff; font-weight:900; font-size:24px;">ALAS</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="tab"
+        onclick="window.location.href = (typeof ALAS_SSO_CONFIG !== 'undefined' && ALAS_SSO_CONFIG.launcherUrl) || 'http://localhost:5173'"
+        title="Volver al menú ALAS"
+        style="opacity: 0.82;"
+      >
+        <span class="tab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="7" x="3" y="3" rx="1.5"/>
+            <rect width="7" height="7" x="14" y="3" rx="1.5"/>
+            <rect width="7" height="7" x="14" y="14" rx="1.5"/>
+            <rect width="7" height="7" x="3" y="14" rx="1.5"/>
+          </svg>
+        </span>
+        <span class="tab-text">Menú</span>
+      </button>
+      <div style="margin: 4px 12px 8px; border-top: 1px solid rgba(255,255,255,0.08);"></div>
+      <div class="nav-sep" style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 16px 8px;">Departamentos</div>
+      <button class="tab on" id="btnDepFabrica" onclick="setDep('fabrica')" title="Fábrica">
+        <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M6 20V9l6-4 6 4v11"/><path d="M9 11h.01"/><path d="M15 11h.01"/><path d="M9 15h.01"/><path d="M15 15h.01"/><path d="M11 20v-3h2v3"/></svg></span>
+        <span class="tab-text">Fábrica</span>
+      </button>
+      <button class="tab" id="btnDepDeposito" onclick="setDep('deposito')" title="Depósito">
+        <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></span>
+        <span class="tab-text">Depósito</span>
+      </button>
+      <div class="nav-sep" style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 24px 16px 8px;">Reportes</div>
+      <button class="tab" data-v="res" onclick="go('res')" title="Resumen">
+        <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-5"/><path d="M12 15V7"/><path d="M17 15v-3"/></svg></span>
+        <span class="tab-text">Resumen</span>
+      </button>
+      <div id="navAdminTitle" class="nav-sep" style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 24px 16px 8px; display:none;">Admin</div>
+      <button class="tab" id="btnAdminUsuarios" data-v="usr" onclick="go('usr')" title="Usuarios" style="display:none;">
+        <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <span class="tab-text">Usuarios</span>
+      </button>
+      
+      <div class="sidebar-profile" style="margin-top: auto; padding-bottom: 24px; width: 100%; box-sizing: border-box;">
+        <div class="user-card" style="width: 100%; box-sizing: border-box;">
+          <div class="user-card-avatar" id="sidebarAvatar">
+            --
+            <div class="online-dot"></div>
+          </div>
+          <div class="user-card-info">
+            <div class="user-card-name" id="sidebarUserName">Usuario</div>
+            <div class="user-card-role" id="sidebarUserRole">
+              <svg class="shield-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Rol
+            </div>
+          </div>
+          <button class="user-card-logout" onclick="logout()" title="Cerrar sesión">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-content-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="top-brand" id="topBrandTitle" aria-live="polite"></h1>
+      </div>
+      <div class="topbar-center">
+        <div id="topKpiBar" class="topbar-kpi-slot"></div>
+      </div>
+      <div class="topbar-right">
+        <div id="offlineIndicator" class="offline-badge" style="display:none;" title="Cambios pendientes por sincronizar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          <span id="offlineCnt">0</span>
+        </div>
+        <span class="last-sync-status" id="lastSyncStatus"></span>
+        <div class="notif-wrapper" id="notifWrapper">
+          <button class="notif-btn" onclick="toggleNotifPanel()" title="Notificaciones" aria-label="Notificaciones" aria-haspopup="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel" style="display:none">
+            <div class="notif-panel-hdr">
+              <span class="notif-panel-title">Notificaciones</span>
+              <button id="notifMarkAll" class="notif-mark-all" onclick="markAllRead()">Leer todo</button>
+            </div>
+            <div class="notif-panel-list" id="notifList"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="vw on" id="v-cal" aria-label="Vista de Calendario"></section>
+      <section class="vw" id="v-res" aria-label="Vista de Resumen"></section>
+      <section class="vw" id="v-usr" aria-label="Gestión de Usuarios">
+        <div class="usr-page">
+          <div class="usr-page-shell">
+            <div class="usr-page-head">
+              <h2 style="font-size:24px; color:var(--text-main);">Gestión de Usuarios</h2>
+              <button class="usr-new-btn" onclick="openUsrModal()">+ Nuevo Usuario</button>
+            </div>
+            <div class="usr-toolbar">
+              <div id="usrDeptFilters" class="usr-filter-row"></div>
+              <div id="usrDeptMeta" class="usr-filter-meta"></div>
+            </div>
+            <div class="usr-table-wrap">
+              <table class="usr-table">
+                <thead>
+                  <tr class="usr-table-head">
+                    <th>Nombre</th>
+                    <th>Rol</th>
+                    <th>Departamento</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="usrTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mBg">
+  <div class="modal-container" id="mdl" role="dialog" aria-modal="true"></div>
+</div>
+
+<div id="logoutModal" class="modal-light-overlay">
+  <div class="modal-light-box">
+    <div class="modal-icon-circle" style="background:rgba(239,68,68,0.1);">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+    </div>
+    <h2 class="modal-title">Cerrar Sesión</h2>
+    <p class="modal-desc">¿Estás seguro que deseas salir de tu cuenta?</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('logoutModal').style.display='none'">Cancelar</button>
+      <button class="btn-danger" onclick="confirmLogout()">Sí, salir</button>
+    </div>
+  </div>
+</div>
+
+<div id="earlyStartModal" class="modal-light-overlay">
+  <div class="modal-light-box">
+    <div class="modal-icon-circle" style="background:rgba(59,130,246,0.12);">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <h2 class="modal-title" style="font-size:22px;">Inicio anticipado</h2>
+    <p class="modal-desc">Esta tarea estaba prevista para las <strong id="earlyStartHi" style="color:#1e293b;"></strong>. ¿Arrancamos ahora?</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cancelEarlyStart()">Cancelar</button>
+      <button class="btn-primary-solid" onclick="confirmEarlyStart()" style="flex:1;">Sí, iniciar</button>
+    </div>
+  </div>
+</div>
+
+<div id="earlyDateModal" class="modal-light-overlay">
+  <div class="modal-light-box">
+    <div class="modal-icon-circle" style="background:rgba(16,185,129,0.12);">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <h2 class="modal-title" style="font-size:22px;">Adelantar al día de hoy</h2>
+    <p class="modal-desc">Esta tarea estaba prevista para el <strong id="earlyDateFecha" style="color:#1e293b;"></strong>. ¿La iniciamos hoy?</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cancelEarlyDate()">Cancelar</button>
+      <button class="btn-primary-solid" onclick="confirmEarlyDate()" style="flex:1;background:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.3);">Sí, hoy</button>
+    </div>
+  </div>
+</div>
+
+<div id="usrModal" class="modal-light-overlay">
+  <div class="modal-light-box" style="text-align:left;">
+    <div class="flex items-center gap-12" style="margin-bottom:24px;">
+      <div class="modal-icon-circle-sm" style="background:rgba(59,130,246,0.1);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      </div>
+      <div>
+        <h2 id="uModTitle" class="modal-title" style="font-size:20px;margin:0;">Nuevo Usuario</h2>
+        <p style="margin:0;color:#64748b;font-size:13px;">Registra un operador o administrador</p>
+      </div>
+    </div>
+
+    <div class="flex-col gap-16">
+      <div>
+        <label class="form-label">Nombre Completo</label>
+        <input type="text" id="uNm" class="form-input" placeholder="Ej. Juan Pérez">
+      </div>
+      
+      <div class="flex gap-12">
+        <div class="flex-1">
+          <label class="form-label">Rol</label>
+          <select id="uRol" class="form-select" onchange="document.getElementById('uPinContainer').style.display = this.value==='admin'?'block':'none'">
+            <option value="operativo">Operativo</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="form-label">Área</label>
+          <select id="uDep" class="form-select">
+            <option value="fabrica">Fábrica</option>
+            <option value="deposito">Depósito</option>
+            <option value="admin">Todos</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="uPinContainer" style="display:none;">
+        <label class="form-label">PIN de Seguridad (Admin)</label>
+        <input type="text" id="uPin" class="form-input" placeholder="Ej. 1234" style="text-align:center;letter-spacing:4px;" value="1234">
+      </div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="uActivo" checked>
+        Usuario activo
+      </label>
+      
+      <div class="flex gap-12" style="margin-top:8px;">
+        <button class="btn-outline" onclick="document.getElementById('usrModal').style.display='none'">Cancelar</button>
+        <button id="uSaveBtn" class="btn-primary-solid" onclick="saveUsr()" style="display:flex;align-items:center;justify-content:center;gap:8px;">Guardar Usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="fabBtn" class="fab-btn" onclick="fabAction()" title="Nueva tarea" aria-label="Nueva tarea">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<div id="searchOverlay" class="search-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Buscar tareas">
+  <div class="search-box">
+    <div class="search-input-row">
+      <svg class="search-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" class="search-input" type="text" placeholder="Buscar por tipo, observación, asignado..." oninput="doSearch(this.value)" autocomplete="off" spellcheck="false">
+      <button class="search-close-btn" onclick="closeSearch()" title="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="searchResults" class="search-results">
+      <div class="search-hint">Escribe para buscar en todas las tareas...</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+<div id="mobShell" class="mob-shell">
+  <header class="mob-header">
+    <div class="mob-header-brand">
+      <img src="assets/logo.jpeg" class="mob-header-logo" alt="ALAS">
+      <span id="mobUserName" class="mob-header-username">Usuario</span>
+    </div>
+    <div class="mob-header-actions">
+      <div class="mob-dept-toggle">
+        <button class="mob-dept-btn on" id="mobBtnFabrica" onclick="mob_setDept('fabrica')">Fábrica</button>
+        <button class="mob-dept-btn" id="mobBtnDeposito" onclick="mob_setDept('deposito')">Depósito</button>
+      </div>
+      <span id="mobUserDept" class="mob-dept-name-label" style="display:none;"></span>
+      <button class="mob-icon-btn" id="mobBellBtn" onclick="mob_toggleNotif()" title="Notificaciones">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="mobNotifDot" style="display:none;position:absolute;top:6px;right:6px;width:7px;height:7px;background:#ef4444;border-radius:50%;border:1.5px solid var(--bg-surface);"></span>
+      </button>
+      <button class="mob-icon-btn" onclick="logout()" title="Salir">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="mob-stats" id="mobStats">
+    <div class="mob-stat-chip all on" onclick="mob_setStat('todos')">
+      <span class="mob-stat-val" id="mobStatTotal">0</span>
+      <span class="mob-stat-lbl">Total</span>
+    </div>
+    <div class="mob-stat-chip pend" onclick="mob_setStat('pendiente')">
+      <span class="mob-stat-val" id="mobStatPend">0</span>
+      <span class="mob-stat-lbl">Pendiente</span>
+    </div>
+    <div class="mob-stat-chip prog" onclick="mob_setStat('en_proceso')">
+      <span class="mob-stat-val" id="mobStatProg">0</span>
+      <span class="mob-stat-lbl">En Proceso</span>
+    </div>
+    <div class="mob-stat-chip done" onclick="mob_setStat('terminado')">
+      <span class="mob-stat-val" id="mobStatDone">0</span>
+      <span class="mob-stat-lbl">Listas</span>
+    </div>
+    <div class="mob-stat-chip prio" onclick="mob_setStat('prio')">
+      <span class="mob-stat-val" id="mobStatPrio">0</span>
+      <span class="mob-stat-lbl">Prioritarias</span>
+    </div>
+  </div>
+
+  <div id="mobTabCal" style="display:contents;">
+    <div class="mob-day-strip-wrap">
+      <div class="mob-day-strip-hdr">
+        <span class="mob-month-label" id="mobMonthLabel">Abril 2026</span>
+        <div class="mob-month-nav">
+          <button class="mob-month-today" onclick="mob_goToday()">Hoy</button>
+          <button class="mob-month-arr" onclick="mob_prevMonth()">‹</button>
+          <button class="mob-month-arr" onclick="mob_nextMonth()">›</button>
+        </div>
+      </div>
+      <div class="mob-day-strip" id="mobDayStrip"></div>
+    </div>
+
+    <div class="mob-task-area" id="mobTaskArea">
+      <div class="mob-day-header">
+        <div class="mob-day-head-copy">
+          <span class="mob-day-title" id="mobDayTitle">Hoy</span>
+          <span class="mob-day-subtitle" id="mobDaySubtitle">Lun, 4 de mayo</span>
+        </div>
+        <div class="mob-day-head-stats">
+          <span class="mob-task-count" id="mobTaskCount">0 tareas</span>
+          <span class="mob-day-progress" id="mobDayProgress">0%</span>
+        </div>
+      </div>
+      <div class="mob-status-row" id="mobStatusRow">
+        <button class="mob-sf-btn on" data-sf="todos" onclick="mob_setStatus('todos')">Todas</button>
+        <button class="mob-sf-btn" data-sf="pendiente" onclick="mob_setStatus('pendiente')">Pendiente</button>
+        <button class="mob-sf-btn" data-sf="en_proceso" onclick="mob_setStatus('en_proceso')">En curso</button>
+        <button class="mob-sf-btn" data-sf="terminado" onclick="mob_setStatus('terminado')">Listas</button>
+        <button class="mob-sf-btn" data-sf="prio" onclick="mob_setStatus('prio')">Prioridad</button>
+      </div>
+      <div id="mobFilterRow"></div>
+      <div id="mobTaskList"></div>
+    </div>
+  </div>
+
+  <div id="mobTabRes" class="mob-tab-res-wrap" style="display:none;"></div>
+  <div id="mobTabUsr" class="mob-tab-res-wrap" style="display:none;"></div>
+
+  <button class="mob-fab" id="mobFab" onclick="mob_openNewTask()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <nav class="mob-tab-bar">
+    <button class="mob-tab on" id="mobNavCal" onclick="mob_switchTab('cal')">
+      <span class="mob-tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+      <span class="mob-tab-label">Calendario</span>
+    </button>
+    <button class="mob-tab" id="mobNavRes" onclick="mob_switchTab('res')">
+      <span class="mob-tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+      <span class="mob-tab-label">Resumen</span>
+    </button>
+    <button class="mob-tab" id="mobNavUsr" onclick="mob_switchTab('usr')" style="display:none;">
+      <span class="mob-tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span class="mob-tab-label">Usuarios</span>
+    </button>
+  </nav>
+</div>
+
+<div class="mob-delay-overlay" id="mobDelayOverlay" onclick="mob_closeDelay()"></div>
+<div class="mob-delay-sheet" id="mobDelaySheet">
+  <div class="mob-notif-handle"></div>
+  <div class="mob-delay-hdr">
+    <span class="mob-delay-title" id="mobDelayTitle">Motivo de retraso</span>
+    <button class="mob-delay-cancel" onclick="mob_closeDelay()">Cancelar</button>
+  </div>
+  <div class="mob-delay-body">
+    <div class="mob-delay-status" id="mobDelayStatus" style="display:none"></div>
+    <textarea class="mob-delay-textarea" id="mobDelayText" placeholder="Describí el motivo del retraso..." maxlength="200"></textarea>
+    <div class="mob-delay-hint">Este mensaje aparecerá destacado en la tarjeta</div>
+  </div>
+  <div class="mob-delay-footer">
+    <button class="mob-delay-clear" onclick="document.getElementById('mobDelayText').value=''">Borrar</button>
+    <button class="mob-delay-save" onclick="mob_saveDelay()">Guardar</button>
+  </div>
+</div>
+
+<div class="mob-delay-history-overlay" id="mobDelayHistoryOverlay" onclick="closeDelayHistory()"></div>
+<div class="mob-delay-history-sheet" id="mobDelayHistorySheet">
+  <div class="mob-notif-handle"></div>
+  <div class="mob-delay-hdr">
+    <span class="mob-delay-title" id="mobDelayHistoryTitle">Historial de demoras</span>
+    <button class="mob-delay-cancel" onclick="closeDelayHistory()">Cerrar</button>
+  </div>
+  <div class="mob-delay-history-meta" id="mobDelayHistoryMeta"></div>
+  <div class="mob-delay-history-list" id="mobDelayHistoryList"></div>
+</div>
+
+<div class="mob-notif-overlay" id="mobNotifOverlay" onclick="mob_closeNotif()"></div>
+<div class="mob-notif-sheet" id="mobNotifSheet">
+  <div class="mob-notif-handle"></div>
+  <div class="mob-notif-hdr">
+    <span class="mob-notif-title">Notificaciones</span>
+    <button class="mob-notif-mark" id="mobNotifMarkAll" onclick="mob_markAllRead()">Leer todo</button>
+  </div>
+  <div class="mob-notif-list" id="mobNotifList"></div>
+</div>
+
+<div class="mob-task-detail" id="mobTaskDetail">
+  <div class="mob-detail-backdrop" onclick="mob_closeTaskDetail()"></div>
+  <div class="mob-detail-sheet">
+    <div class="mob-detail-handle"></div>
+    <div class="mob-detail-head">
+      <div class="mob-detail-type-icon" id="mobDetailIcon"></div>
+      <div class="mob-detail-title">
+        <div class="mob-detail-tipo" id="mobDetailTipo"></div>
+        <div class="mob-detail-obs" id="mobDetailObs"></div>
+      </div>
+    </div>
+    <div class="mob-detail-body" id="mobDetailBody"></div>
+    <div class="mob-detail-actions" id="mobDetailActions"></div>
+  </div>
+</div>
+
+<div class="mob-new-task" id="mobNewTask">
+  <div class="mob-ntk-header">
+    <button class="mob-ntk-close" onclick="mob_closeNewTask()">✕</button>
+    <span class="mob-ntk-title" id="mobNtkFormTitle">Nueva Tarea</span>
+    <span class="mob-ntk-step-label" id="mobNtkStepLbl">Paso 1/3</span>
+  </div>
+  <div class="mob-ntk-progress">
+    <div class="mob-ntk-progress-bar" id="mobNtkProgress" style="width:33%"></div>
+  </div>
+  <div class="mob-ntk-body">
+    <div class="mob-ntk-step active" id="mobNtkStep1">
+      <div class="mob-ntk-step-title">¿Qué tipo de tarea?</div>
+      <div class="mob-ntk-step-sub">Elegí el tipo de actividad a registrar</div>
+      <div class="mob-ntk-type-grid" id="mobNtkTypeGrid"></div>
+      <div class="mob-ntk-prio-toggle" id="mobNtkPrioToggle" onclick="mob_togglePrio()">
+        <div class="mob-ntk-prio-left">
+          <div class="mob-ntk-prio-dot"></div>
+          <div>
+            <div class="mob-ntk-prio-label">Alta prioridad</div>
+            <div class="mob-ntk-prio-sub">Aparecerá destacada en la lista</div>
+          </div>
+        </div>
+        <div class="mob-ntk-switch" id="mobNtkPrioSwitch"></div>
+      </div>
+    </div>
+
+    <div class="mob-ntk-step" id="mobNtkStep2">
+      <div class="mob-ntk-step-title">¿Cuándo y quién?</div>
+      <div class="mob-ntk-step-sub">Horario y responsable de la actividad</div>
+      <div class="mob-ntk-field">
+        <label class="mob-ntk-label">Fecha</label>
+        <input type="date" class="mob-ntk-input" id="mobNtkFecha">
+      </div>
+      <div class="mob-ntk-field">
+        <label class="mob-ntk-label">Hora prevista</label>
+        <input type="time" class="mob-ntk-input" id="mobNtkHi">
+      </div>
+      <div class="mob-ntk-field">
+        <label class="mob-ntk-label">Asignado a</label>
+        <div class="mob-ntk-user-list" id="mobNtkUserList"></div>
+      </div>
+    </div>
+
+    <div class="mob-ntk-step" id="mobNtkStep3">
+      <div class="mob-ntk-step-title">Detalles finales</div>
+      <div class="mob-ntk-step-sub">Agregá una observación y confirmá</div>
+      <div class="mob-ntk-field">
+        <label class="mob-ntk-label">Observación</label>
+        <textarea class="mob-ntk-textarea" id="mobNtkObs" placeholder="Descripción de la tarea..." rows="3"></textarea>
+      </div>
+      <div id="mobNtkSummary" style="background:var(--bg-surface);border-radius:12px;border:1px solid var(--border-color);padding:14px;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+  <div class="mob-ntk-footer">
+    <button class="mob-ntk-back" id="mobNtkBackBtn" onclick="mob_ntkBack()" style="display:none;">← Atrás</button>
+    <button class="mob-ntk-next" id="mobNtkNextBtn" onclick="mob_ntkNext()">Siguiente →</button>
+  </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
+
+
+
+
+
+
+
+
+
+<script>
+  setTimeout(function() {
+    var l = document.getElementById('loader');
+    if(l && getComputedStyle(l).display !== 'none') {
+      l.style.setProperty('display', 'none', 'important');
+      l.style.visibility = 'hidden';
+      l.style.opacity = '0';
+      console.log('Failsafe loader hidden triggered after 30 seconds.');
+    }
+  }, 30000);
+</script>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <script src="sso-config.js"></script>
+  
+  
+  <script src="supabase-lib.f4d1b5b7.min.js" defer></script>
+  <script src="app.f8d9c4a3.min.js" defer></script>
+</body>
+</html>

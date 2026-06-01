@@ -1,0 +1,155 @@
+// ============================================================
+//  ALAS Fábrica — app-boot.js
+//  Arranque y timers
+// ============================================================
+
+function updateConnectionStatus() {
+  const el = document.getElementById('offlineIndicator');
+  if (!el) return;
+  if (navigator.onLine) {
+    el.classList.add('online');
+    el.querySelector('svg')?.setAttribute('opacity', '0.5');
+  } else {
+    el.classList.remove('online');
+    el.querySelector('svg')?.setAttribute('opacity', '1');
+  }
+}
+
+async function bootstrap() {
+  showLoaderOverlay({
+    title: 'Iniciando tablero operativo',
+    detail: 'Precargando acceso, usuarios y entorno de trabajo...',
+    loginState: 'active',
+    loginText: 'Cargando lista de usuarios',
+    opsState: 'pending',
+    opsText: 'Preparando calendario y panel'
+  });
+  
+  // Failsafe: Garantizar que el loader no se quede pegado mÃ¡s de 8 segundos pase lo que pase.
+  // Removed artificial 8s hide limit
+  updateSidebarUser();
+  updateOfflineIndicator();
+  updateBellBadge();
+  updateConnectionStatus();
+  window.addEventListener('online', updateConnectionStatus);
+  window.addEventListener('offline', updateConnectionStatus);
+  App.usersLoading = true;
+  installClientGuards();
+  initLogin();
+
+  document.getElementById('loginPin')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+  });
+  document.getElementById('loginPin')?.addEventListener('input', () => {
+    if (App.loginPinState === 'error') {
+      setLoginPinStatus('neutral', 'Ingresa tu PIN de administrador');
+    }
+    showLoginError('');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && App.reorderPickId) {
+      clearEnProcesoReorderState();
+    }
+  });
+  document.addEventListener('click', e => {
+    if (!App.reorderPickId) return;
+    const list = document.getElementById('enProcesoList');
+    if (list && !list.contains(e.target)) {
+      clearEnProcesoReorderState(list);
+    }
+  }, true);
+
+  try { await loadUsers(false); } catch (e) {
+    console.warn('Error loading users on boot:', e);
+  }
+
+  // SSO: si no hay sesión PIN restaurada, intentar sesión del Launcher
+  if (!App.currentUser && typeof initSSO === 'function') {
+    await initSSO();
+  }
+
+  if (App.currentUser) {
+    setLoaderOverlayState({
+      title: 'Sincronizando operaciones',
+      detail: 'Recuperando tareas, tablero y estado actual de la jornada...',
+      loginState: 'done',
+      loginText: 'Sesion restaurada',
+      opsState: 'active',
+      opsText: 'Cargando tareas y resumen'
+    });
+    const hadPendingQueue = hasPendingQueue();
+    try {
+      const flushedQueue = await processQueue({ silent: true, refreshAfter: true, refreshSilent: false });
+      if (!hadPendingQueue || !flushedQueue) {
+        await loadTaskData(false, hadPendingQueue ? false : true);
+      }
+    } catch (e) {
+      console.warn('Error during boot sync:', e);
+      toast('Error al sincronizar datos iniciales');
+    }
+  } else {
+    render();
+    setLoaderOverlayState({
+      title: 'Acceso listo',
+      detail: 'La pantalla de ingreso ya esta preparada para trabajar.',
+      loginState: 'done',
+      loginText: 'Usuarios disponibles',
+      opsState: 'done',
+      opsText: 'Interfaz operativa precargada'
+    });
+    hideLoaderOverlay();
+  }
+}
+
+async function refreshLiveData() {
+  if (document.hidden || !App.currentUser || isSyncing) return;
+  try {
+    if (hasPendingQueue()) {
+      await processQueue({ silent: true, refreshAfter: true });
+      return;
+    }
+    await loadTaskData(true, true);
+  } catch (e) {
+    console.warn('Error refreshing live data:', e);
+  }
+}
+
+// Suscripción en tiempo real via Supabase (reemplaza el polling)
+if (isSupabaseReady()) {
+  const sub = window.SUPABASE.subscribeToTasks((payload) => {
+    if (document.hidden || !App.currentUser) return;
+    // Si estamos sincronizando, no pisar el estado optimista
+    if (isSyncing) { window.__supabasePendingRefresh = true; return; }
+    loadTaskData(true);
+  });
+  window.__supabaseSub = sub;
+  window.addEventListener('beforeunload', () => {
+    window.SUPABASE.closeChannel(window.__supabaseSub);
+  });
+}
+
+bootstrap();
+
+// Escuchar cambios desde otras pestañas
+try {
+  SYNC_CHANNEL.addEventListener('message', (e) => {
+    if (e.data === 'data_changed' && !document.hidden && App.currentUser) {
+      loadTaskData(true, true);
+    }
+  });
+} catch (e) {}
+
+setInterval(() => { refreshLiveData(); }, TASKS_POLL_INTERVAL);
+setInterval(() => { if (!document.hidden) checkAndNotify(); }, 60000);
+setInterval(() => { if (!document.hidden) loadUsers(true);  }, 60000);
+setInterval(() => updateLastSyncStatus(), 5000);
+setInterval(() => {
+  if (document.hidden || !hasPendingQueue()) return;
+  processQueue({ silent: true, refreshAfter: true }).catch(e => {
+    console.warn('Error processing queue (interval):', e);
+  });
+}, 15000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshLiveData();
+});

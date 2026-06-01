@@ -1,0 +1,740 @@
+// ============================================================
+//  ALAS Fabrica - Code.gs
+//  CODIGO LIMPIO Y REPARADO
+// ============================================================
+
+// Clave compartida con public/config.js.
+var APP_KEY = 'ALAS_2025_APP_KEY';
+var SESSION_TTL_SECONDS = 21600; // 6 horas
+
+var SHEET_NAMES = {
+  TASKS: 'Tareas',
+  USERS: 'Usuarios',
+  DELAYS: 'Demoras'
+};
+
+var TASK_SCHEMA = [
+  { key: 'id',        aliases: ['id'] },
+  { key: 'fecha',     aliases: ['fecha'] },
+  { key: 'tipo',      aliases: ['tipo'] },
+  { key: 'obs',       aliases: ['obs', 'observacion', 'observaciones'] },
+  { key: 'hi',        aliases: ['hi', 'horainicio', 'hora_inicio'] },
+  { key: 'hf',        aliases: ['hf', 'horafin', 'hora_fin'] },
+  { key: 'estado',    aliases: ['estado'] },
+  { key: 'asig',      aliases: ['asig', 'asignado'] },
+  { key: 'dep',       aliases: ['dep', 'departamento', 'area'] },
+  { key: 'prio',      aliases: ['prio', 'prioridad'] },
+  { key: 'pOrder',    aliases: ['porder', 'p_order', 'orden', 'orden_proceso'] },
+  { key: 'fCrea',     aliases: ['fcrea', 'fecha_creacion', 'fechacreacion'] },
+  { key: 'fIni',      aliases: ['fini', 'fecha_inicio', 'fechainicio'] },
+  { key: 'fFin',      aliases: ['ffin', 'fecha_fin', 'fechafin'] },
+  { key: 'creadoPor', aliases: ['creadopor', 'creado_por'] },
+  { key: 'retraso',   aliases: ['retraso', 'motivo_retraso', 'motivoretraso'] }
+];
+
+var USER_SCHEMA = [
+  { key: 'id',      aliases: ['id'] },
+  { key: 'nombre',  aliases: ['nombre', 'nm', 'name'] },
+  { key: 'rol',     aliases: ['rol', 'role'] },
+  { key: 'dep',     aliases: ['dep', 'departamento', 'area'] },
+  { key: 'pinHash', aliases: ['pinhash', 'pin_hash', 'hashpin'] },
+  { key: 'activo',  aliases: ['activo', 'active'] }
+];
+
+var DELAY_SCHEMA = [
+  { key: 'id',         aliases: ['id'] },
+  { key: 'taskId',     aliases: ['taskid', 'task_id', 'idtarea', 'id_tarea'] },
+  { key: 'motivo',     aliases: ['motivo', 'retraso', 'motivo_retraso'] },
+  { key: 'inicio',     aliases: ['inicio', 'fechainicio', 'fecha_inicio', 'startat', 'startedat'] },
+  { key: 'fin',        aliases: ['fin', 'fechafin', 'fecha_fin', 'endat', 'endedat'] },
+  { key: 'minutos',    aliases: ['minutos', 'duracionminutos', 'duracion_minutos'] },
+  { key: 'abiertaPor', aliases: ['abiertapor', 'abierta_por', 'iniciadapor'] },
+  { key: 'cerradaPor', aliases: ['cerradapor', 'cerrada_por', 'finalizadapor'] },
+  { key: 'estado',     aliases: ['estado', 'status'] }
+];
+
+// -- ENDPOINTS -------------------------------------------------
+
+function doGet(e) {
+  try {
+    var resource = normalizeKey((e && e.parameter && e.parameter.resource) || 'tareas');
+    if (resource !== 'health') {
+      validateAppKey_((e && e.parameter && (e.parameter._key || e.parameter.key)) || '');
+    }
+    if (resource === 'usuarios') return jsonOutput(listUsers());
+    if (resource === 'demoras') {
+      var actor = validateSession_(
+        (e && e.parameter && (e.parameter._uid || e.parameter.uid)) || '',
+        (e && e.parameter && (e.parameter._token || e.parameter.token)) || ''
+      );
+      return jsonOutput(listTaskDelays_((e && e.parameter && e.parameter.taskId) || '', actor));
+    }
+    if (resource === 'health') return jsonOutput({ status: 'ok', timestamp: new Date().toISOString() });
+    return jsonOutput(listTasks());
+  } catch (error) {
+    return jsonOutput({ status: 'error', message: error.message });
+  }
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    var payload = parsePayload_(e);
+    var action = normalizeKey(payload.action || '');
+    validateAppKey_(payload._key);
+
+    if (action === 'login') {
+      var session = loginUser(payload);
+      return jsonOutput({ status: 'ok', user: session.user, token: session.token });
+    }
+    if (action === 'save' || action === 'savetask') {
+      var actor = validateSession_(payload._uid, payload._token);
+      var savedTask = saveTaskAsUser_(payload.task || payload, actor);
+      SpreadsheetApp.flush();
+      return jsonOutput({ status: 'saved', task: savedTask });
+    }
+    if (action === 'startdelay') {
+      var actorStart = validateSession_(payload._uid, payload._token);
+      var res = startTaskDelayAsUser_(payload, actorStart);
+      SpreadsheetApp.flush();
+      return jsonOutput(res);
+    }
+    if (action === 'finishdelay') {
+      var actorFinish = validateSession_(payload._uid, payload._token);
+      var res = finishTaskDelayAsUser_(payload, actorFinish);
+      SpreadsheetApp.flush();
+      return jsonOutput(res);
+    }
+    if (action === 'delete' || action === 'deletetask') {
+      validateAdmin_(payload._uid, payload._token);
+      deleteTask(payload.id || (payload.task && payload.task.id));
+      SpreadsheetApp.flush();
+      return jsonOutput({ status: 'deleted' });
+    }
+    if (action === 'saveuser') {
+      validateAdmin_(payload._uid, payload._token);
+      var savedUser = saveUser(payload.user || payload);
+      SpreadsheetApp.flush();
+      return jsonOutput({ status: 'saved', user: savedUser });
+    }
+    throw new Error('Accion desconocida: ' + action);
+  } catch (error) {
+    return jsonOutput({ status: 'error', message: error.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doOptions() {
+  return jsonOutput({ status: 'ok' });
+}
+
+function listTasks() {
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var delaySummaryMap = buildDelaySummaryMap_();
+  return info.records.map(function(entry) {
+    return hydrateTaskDelayState_(entry.record, delaySummaryMap[String(entry.record.id || '').trim()] || null);
+  });
+}
+
+function listUsers() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('users_list');
+  if (cached) { try { return JSON.parse(cached); } catch (e) {} }
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.USERS, USER_SCHEMA), USER_SCHEMA);
+  var result = info.records.map(function(entry) { return sanitizeUserForClient_(entry.record); });
+  try { cache.put('users_list', JSON.stringify(result), 120); } catch (e) {}
+  return result;
+}
+
+function loginUser(payload) {
+  var id = String(payload.id || '').trim();
+  if (!id) throw new Error('Usuario no especificado');
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.USERS, USER_SCHEMA), USER_SCHEMA);
+  var matchEntry = findRecordById_(info, id);
+  var match = matchEntry && matchEntry.record;
+  if (!match) throw new Error('Usuario no encontrado');
+  if (!boolValue_(match.activo, true)) throw new Error('Usuario inactivo');
+  if (userNeedsPin_(match)) {
+    var pin = String(payload.pin || '').trim();
+    if (!pin) throw new Error('PIN requerido');
+    if (hashPin_(pin) !== String(match.pinHash || '').trim()) throw new Error('PIN incorrecto');
+  }
+  return { user: sanitizeUserForClient_(match), token: issueSessionToken_(match) };
+}
+
+function saveUser(user) {
+  CacheService.getScriptCache().remove('users_list');
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.USERS, USER_SCHEMA), USER_SCHEMA);
+  var role = normalizeRole_(user.rol);
+  var dep = normalizeDepartment_(user.dep, role);
+  var lookupId = String(user.id || '').trim();
+  var existing = lookupId ? findRecordById_(info, lookupId) : null;
+  var pin = String(user.pin || '').trim();
+  var pinHash = '';
+  if (role === 'admin') {
+    if (pin) { pinHash = hashPin_(pin); }
+    else if (existing && existing.record.pinHash) { pinHash = String(existing.record.pinHash); }
+    else { throw new Error('El administrador necesita un PIN'); }
+  }
+  var nombre = String(user.nombre || '').trim();
+  if (!nombre) throw new Error('El nombre es obligatorio');
+  var record = {
+    id: lookupId || (existing ? existing.record.id : 'usr_' + Utilities.getUuid().slice(0, 8)),
+    nombre: nombre,
+    rol: role,
+    dep: dep,
+    pinHash: pinHash,
+    activo: boolValue_(user.activo, true)
+  };
+  writeRecord_(info, USER_SCHEMA, existing ? existing.rowNumber : null, record, existing && existing.values);
+  return sanitizeUserForClient_(record);
+}
+
+function saveTask(task) {
+  CacheService.getScriptCache().remove('tasks_list');
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  return saveTaskWithInfo_(info, task, null);
+}
+
+function saveTaskWithInfo_(info, task, existing) {
+  var id = String(task.id || '').trim();
+  if (!id) throw new Error('La tarea necesita un ID');
+  var match = existing || findRecordById_(info, id);
+  var current = match ? hydrateTaskDelayState_(match.record) : null;
+  var requestedStatus = hasField_(task, 'estado') ? task.estado : (current ? current.estado : 'pendiente');
+  var nextStatus = normalizeTaskStatus_(requestedStatus);
+  if (current && current.delayActive && nextStatus !== 'en_proceso') {
+    throw new Error('No podes cerrar o mover una tarea con una demora activa');
+  }
+  var record = sanitizeTask_({
+    id: id,
+    fecha: task.fecha || '',
+    tipo: task.tipo || '',
+    obs: task.obs || '',
+    hi: task.hi || '',
+    hf: task.hf || '',
+    estado: task.estado || 'pendiente',
+    asig: task.asig || '',
+    dep: task.dep || 'fabrica',
+    prio: boolValue_(task.prio, false),
+    pOrder: hasField_(task, 'pOrder') ? task.pOrder : '',
+    fCrea: task.fCrea || '',
+    fIni: task.fIni || '',
+    fFin: task.fFin || '',
+    creadoPor: task.creadoPor || '',
+    retraso: match ? String(match.record.retraso || '').trim() : String(task.retraso || '').trim()
+  });
+  writeRecord_(info, TASK_SCHEMA, match ? match.rowNumber : null, record, match && match.values);
+  return hydrateTaskDelayState_(record);
+}
+
+function saveTaskAsUser_(task, actor) {
+  if (isAdmin_(actor)) return saveTask(task);
+  var userDep = normalizeDepartment_(actor.dep, actor.rol);
+  if (userDep === 'admin') throw new Error('Departamento operativo invalido');
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var id = String(task.id || '').trim();
+  if (!id) throw new Error('La tarea necesita un ID');
+  var existing = findRecordById_(info, id);
+  if (!existing) {
+    if (normalizeTaskStatus_(task.estado) === 'terminado') { throw new Error('No podes crear una tarea ya terminada'); }
+    task.dep = userDep;
+    task.creadoPor = String(actor.nombre || actor.id || '').trim();
+    return saveTaskWithInfo_(info, task, null);
+  }
+  var current = hydrateTaskDelayState_(existing.record);
+  if (current.dep !== userDep) { throw new Error('No podes modificar tareas de otro departamento'); }
+  var requestedStatus = hasField_(task, 'estado') ? task.estado : current.estado;
+  var nextStatus = normalizeTaskStatus_(requestedStatus);
+  var requestedFecha = hasField_(task, 'fecha') ? String(task.fecha || '').trim() : current.fecha;
+  var nextFecha = current.fecha;
+  var isStart = current.estado === 'pendiente' && nextStatus === 'en_proceso';
+  var isFinish = current.estado === 'en_proceso' && nextStatus === 'terminado';
+  if (current.estado === 'terminado') { throw new Error('La tarea ya esta terminada'); }
+  if (nextStatus !== current.estado && !isStart && !isFinish) { throw new Error('Cambio de estado no permitido'); }
+  if (requestedFecha && requestedFecha !== current.fecha) {
+    if (isStart && requestedFecha === todayKey_()) { nextFecha = requestedFecha; }
+    else { throw new Error('Solo un administrador puede cambiar la fecha de una tarea'); }
+  }
+  if (current.delayActive && nextStatus !== 'en_proceso') { throw new Error('No podes finalizar una tarea con una demora activa'); }
+  var record = sanitizeTask_({
+    id: current.id, fecha: nextFecha, tipo: current.tipo, obs: current.obs,
+    hi: isStart && hasField_(task, 'hi') ? task.hi : current.hi,
+    hf: isFinish && hasField_(task, 'hf') ? task.hf : current.hf,
+    estado: nextStatus, asig: current.asig, dep: current.dep, prio: current.prio,
+    pOrder: hasField_(task, 'pOrder') ? task.pOrder : current.pOrder,
+    fCrea: current.fCrea, fIni: isStart && hasField_(task, 'fIni') ? task.fIni : current.fIni,
+    fFin: isFinish && hasField_(task, 'fFin') ? task.fFin : current.fFin,
+    creadoPor: current.creadoPor, retraso: String(existing.record.retraso || '').trim()
+  });
+  writeRecord_(info, TASK_SCHEMA, existing.rowNumber, record, existing.values);
+  return hydrateTaskDelayState_(record);
+}
+
+function listTaskDelays_(taskId, actor) {
+  var lookupTaskId = String(taskId || '').trim();
+  if (!lookupTaskId) throw new Error('Falta el ID de la tarea');
+  var taskInfo = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var taskEntry = findRecordById_(taskInfo, lookupTaskId);
+  if (!taskEntry) throw new Error('No se encontro la tarea');
+  var task = hydrateTaskDelayState_(taskEntry.record);
+  validateTaskAccess_(task, actor);
+  var delayInfo = readSheetRecords_(getOrCreateSheet_(SHEET_NAMES.DELAYS, DELAY_SCHEMA), DELAY_SCHEMA);
+  var delays = delayInfo.records
+    .map(function(entry) { return sanitizeDelay_(entry.record); })
+    .filter(function(delay) { return delay.taskId === lookupTaskId; })
+    .sort(function(a, b) { return String(b.inicio || '').localeCompare(String(a.inicio || '')); });
+  if (!delays.some(function(delay) { return delay.estado === 'activa'; })) {
+    var legacyDelay = buildLegacyDelayRecord_(task);
+    if (legacyDelay) delays.unshift(legacyDelay);
+  }
+  return delays;
+}
+
+function startTaskDelayAsUser_(payload, actor) {
+  CacheService.getScriptCache().remove('tasks_list');
+  var taskId = String(payload.taskId || payload.id || '').trim();
+  if (!taskId) throw new Error('Falta el ID de la tarea');
+  var motivo = String(payload.motivo || payload.retraso || '').trim();
+  if (!motivo) throw new Error('Debes indicar el motivo de la demora');
+  var taskInfo = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var taskEntry = findRecordById_(taskInfo, taskId);
+  if (!taskEntry) throw new Error('No se encontro la tarea');
+  var task = hydrateTaskDelayState_(taskEntry.record);
+  validateTaskAccess_(task, actor);
+  if (task.estado !== 'en_proceso') throw new Error('Solo podes registrar demoras en tareas en proceso');
+  if (task.delayActive) throw new Error('La tarea ya tiene una demora activa');
+  var delayInfo = readSheetRecords_(getOrCreateSheet_(SHEET_NAMES.DELAYS, DELAY_SCHEMA), DELAY_SCHEMA);
+  var existingActive = findActiveDelayByTaskId_(delayInfo, taskId);
+  if (existingActive) throw new Error('Ya existe una demora activa para esta tarea');
+  var startedAt = normalizeDateTimeValue_(payload.startedAt || payload.inicio || new Date().toISOString());
+  var delayRecord = sanitizeDelay_({
+    id: String(payload.delayId || payload.id || ('dly_' + Utilities.getUuid().slice(0, 8))).trim(),
+    taskId: taskId, motivo: motivo, inicio: startedAt, fin: '', minutos: '',
+    abiertaPor: String(actor.nombre || actor.id || '').trim(), cerradaPor: '', estado: 'activa'
+  });
+  if (findRecordById_(delayInfo, delayRecord.id)) { throw new Error('El identificador de demora ya existe'); }
+  writeRecord_(delayInfo, DELAY_SCHEMA, null, delayRecord, null);
+  var updatedTaskRecord = sanitizeTask_({
+    id: task.id, fecha: task.fecha, tipo: task.tipo, obs: task.obs, hi: task.hi, hf: task.hf, estado: task.estado,
+    asig: task.asig, dep: task.dep, prio: task.prio, pOrder: task.pOrder, fCrea: task.fCrea, fIni: task.fIni,
+    fFin: task.fFin, creadoPor: task.creadoPor, retraso: motivo
+  });
+  writeRecord_(taskInfo, TASK_SCHEMA, taskEntry.rowNumber, updatedTaskRecord, taskEntry.values);
+  return { status: 'saved', task: hydrateTaskDelayState_(updatedTaskRecord), delay: delayRecord };
+}
+
+function finishTaskDelayAsUser_(payload, actor) {
+  CacheService.getScriptCache().remove('tasks_list');
+  var taskId = String(payload.taskId || '').trim();
+  if (!taskId) throw new Error('Falta el ID de la tarea');
+  var taskInfo = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var taskEntry = findRecordById_(taskInfo, taskId);
+  if (!taskEntry) throw new Error('No se encontro la tarea');
+  var task = hydrateTaskDelayState_(taskEntry.record);
+  validateTaskAccess_(task, actor);
+  if (task.estado !== 'en_proceso') throw new Error('La tarea ya no esta en proceso');
+  if (!task.delayActive) throw new Error('La tarea no tiene una demora activa');
+  var delayInfo = readSheetRecords_(getOrCreateSheet_(SHEET_NAMES.DELAYS, DELAY_SCHEMA), DELAY_SCHEMA);
+  var delayEntry = findDelayEntryForTask_(delayInfo, task, payload.delayId || payload.id);
+  var delay = delayEntry ? sanitizeDelay_(delayEntry.record) : buildLegacyDelayRecord_(task);
+  if (!delay) throw new Error('No se encontro la demora activa');
+  if (delay.estado !== 'activa') throw new Error('La demora ya fue cerrada');
+  var endedAt = normalizeDateTimeValue_(payload.endedAt || payload.fin || new Date().toISOString());
+  var minutes = diffMinutes_(delay.inicio, endedAt);
+  var closedDelay = sanitizeDelay_({
+    id: delay.id, taskId: delay.taskId, motivo: delay.motivo, inicio: delay.inicio, fin: endedAt,
+    minutos: minutes, abiertaPor: delay.abiertaPor, cerradaPor: String(actor.nombre || actor.id || '').trim(), estado: 'cerrada'
+  });
+  if (delayEntry) { writeRecord_(delayInfo, DELAY_SCHEMA, delayEntry.rowNumber, closedDelay, delayEntry.values); }
+  else { writeRecord_(delayInfo, DELAY_SCHEMA, null, closedDelay, null); }
+  var updatedTaskRecord = sanitizeTask_({
+    id: task.id, fecha: task.fecha, tipo: task.tipo, obs: task.obs, hi: task.hi, hf: task.hf, estado: task.estado,
+    asig: task.asig, dep: task.dep, prio: task.prio, pOrder: task.pOrder, fCrea: task.fCrea, fIni: task.fIni,
+    fFin: task.fFin, creadoPor: task.creadoPor, retraso: ''
+  });
+  writeRecord_(taskInfo, TASK_SCHEMA, taskEntry.rowNumber, updatedTaskRecord, taskEntry.values);
+  return { status: 'saved', task: hydrateTaskDelayState_(updatedTaskRecord), delay: closedDelay };
+}
+
+function deleteTask(id) {
+  CacheService.getScriptCache().remove('tasks_list');
+  var taskId = String(id || '').trim();
+  if (!taskId) throw new Error('Falta el ID de la tarea');
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.TASKS, TASK_SCHEMA), TASK_SCHEMA);
+  var entry = findRecordById_(info, taskId);
+  var rowNumber = entry && entry.rowNumber;
+  if (!rowNumber) throw new Error('No se encontro la tarea a eliminar');
+  deleteDelayRowsByTaskId_(taskId);
+  info.sheet.deleteRow(rowNumber);
+}
+
+// -- VALIDACIONES ----------------------------------------------
+
+function validateAppKey_(key) {
+  if (String(key || '').trim() !== APP_KEY) { throw new Error('Acceso no autorizado'); }
+}
+
+function validateAdmin_(uid, token) {
+  var user = validateSession_(uid, token);
+  if (!isAdmin_(user)) throw new Error('Permiso denegado: se requiere rol administrador');
+  return user;
+}
+
+function validateSession_(uid, token) {
+  var userId = String(uid || '').trim();
+  if (!userId) throw new Error('Se requiere autenticacion');
+  var sessionToken = String(token || '').trim();
+  if (!sessionToken) throw new Error('Sesion invalida');
+  if (CacheService.getScriptCache().get(sessionCacheKey_(userId, sessionToken)) !== '1') {
+    throw new Error('Sesion vencida. Inicia sesion nuevamente');
+  }
+  var info = readSheetRecords_(getSheetOrThrow_(SHEET_NAMES.USERS, USER_SCHEMA), USER_SCHEMA);
+  var userEntry = findRecordById_(info, userId);
+  var user = userEntry && userEntry.record;
+  if (!user) throw new Error('Usuario no encontrado');
+  if (!boolValue_(user.activo, true)) throw new Error('Usuario inactivo');
+  CacheService.getScriptCache().put(sessionCacheKey_(userId, sessionToken), '1', SESSION_TTL_SECONDS);
+  return user;
+}
+
+// -- HELPERS INTERNOS ------------------------------------------
+
+function parsePayload_(e) {
+  if (!e || !e.postData || !e.postData.contents) throw new Error('No se recibieron datos');
+  try { return JSON.parse(e.postData.contents); } catch (err) { throw new Error('Payload invalido: ' + err.message); }
+}
+
+function getSheetOrThrow_(sheetName, schema) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('No existe la hoja "' + sheetName + '"');
+  if (schema) ensureSheetHeaders_(sheet, schema);
+  return sheet;
+}
+
+function getOrCreateSheet_(sheetName, schema) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) sheet = ss.insertSheet(sheetName);
+  ensureSheetHeaders_(sheet, schema);
+  return sheet;
+}
+
+function getSheetIfExists_(sheetName, schema) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return null;
+  if (schema) ensureSheetHeaders_(sheet, schema);
+  return sheet;
+}
+
+function readSheetRecords_(sheet, schema) {
+  ensureSheetHeaders_(sheet, schema);
+  var lastRow = Math.max(sheet.getLastRow(), 1);
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var headers = values.length ? values[0] : [];
+  var columnMap = buildColumnMap_(headers, schema);
+  var records = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (isEmptyRow_(row)) continue;
+    var record = {};
+    schema.forEach(function(field) { var idx = columnMap[field.key]; record[field.key] = idx === -1 ? '' : row[idx]; });
+    records.push({ rowNumber: i + 1, values: row, record: record });
+  }
+  return { sheet: sheet, headers: headers, columnMap: columnMap, records: records };
+}
+
+function ensureSheetHeaders_(sheet, schema) {
+  if (!schema || !schema.length) return;
+  var lastCol = sheet.getLastColumn();
+  var headers = lastCol ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  var normalizedHeaders = {};
+  headers.forEach(function(header, index) { normalizedHeaders[normalizeKey(header)] = index; });
+  var changed = false;
+  schema.forEach(function(field) {
+    var found = false;
+    field.aliases.some(function(alias) {
+      if (normalizedHeaders.hasOwnProperty(alias)) { found = true; return true; }
+      return false;
+    });
+    if (!found) { headers.push(field.key); normalizedHeaders[field.aliases[0]] = headers.length - 1; changed = true; }
+  });
+  if (!changed && headers.length) return;
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+}
+
+function buildColumnMap_(headers, schema) {
+  var normalizedHeaders = {};
+  headers.forEach(function(header, index) { normalizedHeaders[normalizeKey(header)] = index; });
+  var map = {};
+  schema.forEach(function(field) {
+    map[field.key] = -1;
+    field.aliases.some(function(alias) {
+      if (normalizedHeaders.hasOwnProperty(alias)) { map[field.key] = normalizedHeaders[alias]; return true; }
+      return false;
+    });
+  });
+  return map;
+}
+
+function findRecordById_(info, id) {
+  var lookupId = String(id || '').trim();
+  if (!lookupId) return null;
+  var match = info.sheet.createTextFinder(lookupId).matchEntireCell(true).findNext();
+  if (match) {
+    var rowNumber = match.getRow();
+    for (var i = 0; i < info.records.length; i++) { if (info.records[i].rowNumber === rowNumber) { return info.records[i]; } }
+  }
+  for (var i = 0; i < info.records.length; i++) {
+    var entry = info.records[i];
+    if (String(entry.record.id || '').trim() === lookupId) { return entry; }
+  }
+  return null;
+}
+
+function hydrateTaskDelayState_(task, summary) {
+  var cleanTask = sanitizeTask_(task);
+  var delaySummary = summary || getTaskDelaySummary_(cleanTask.id) || buildLegacyDelaySummary_(cleanTask);
+  if (!delaySummary) {
+    cleanTask.delayCount = 0; cleanTask.delayTotalMinutes = 0; cleanTask.delayActive = false;
+    cleanTask.delayCurrentId = ''; cleanTask.delayCurrentStart = ''; return cleanTask;
+  }
+  cleanTask.delayCount = toNonNegativeInt_(delaySummary.delayCount, 0);
+  cleanTask.delayTotalMinutes = toNonNegativeInt_(delaySummary.delayTotalMinutes, 0);
+  cleanTask.delayActive = !!delaySummary.delayActive;
+  cleanTask.delayCurrentId = cleanTask.delayActive ? String(delaySummary.delayCurrentId || '').trim() : '';
+  cleanTask.delayCurrentStart = cleanTask.delayActive ? normalizeDateTimeValue_(delaySummary.delayCurrentStart || '') : '';
+  cleanTask.retraso = cleanTask.delayActive ? String(delaySummary.retraso || '').trim() : '';
+  return cleanTask;
+}
+
+function getTaskDelaySummary_(taskId) {
+  if (!String(taskId || '').trim()) return null;
+  return buildDelaySummaryMap_()[String(taskId || '').trim()] || null;
+}
+
+function buildDelaySummaryMap_() {
+  var sheet = getSheetIfExists_(SHEET_NAMES.DELAYS, DELAY_SCHEMA);
+  if (!sheet) return {};
+  var info = readSheetRecords_(sheet, DELAY_SCHEMA);
+  var summaryMap = {};
+  info.records.forEach(function(entry) {
+    var delay = sanitizeDelay_(entry.record);
+    if (!delay.taskId) return;
+    if (!summaryMap[delay.taskId]) {
+      summaryMap[delay.taskId] = { delayCount: 0, delayTotalMinutes: 0, delayActive: false, delayCurrentId: '', delayCurrentStart: '', retraso: '' };
+    }
+    var summary = summaryMap[delay.taskId];
+    summary.delayCount += 1;
+    if (delay.estado === 'activa') {
+      if (!summary.delayActive || String(delay.inicio || '') > String(summary.delayCurrentStart || '')) {
+        summary.delayActive = true; summary.delayCurrentId = delay.id;
+        summary.delayCurrentStart = delay.inicio; summary.retraso = delay.motivo;
+      }
+      return;
+    }
+    summary.delayTotalMinutes += toNonNegativeInt_(delay.minutos, 0);
+  });
+  return summaryMap;
+}
+
+function buildLegacyDelaySummary_(task) {
+  var legacyDelay = buildLegacyDelayRecord_(task);
+  if (!legacyDelay) return null;
+  return { delayCount: 1, delayTotalMinutes: 0, delayActive: true, delayCurrentId: legacyDelay.id, delayCurrentStart: legacyDelay.inicio, retraso: legacyDelay.motivo };
+}
+
+function buildLegacyDelayRecord_(task) {
+  if (!task) return null;
+  var taskId = String(task.id || '').trim();
+  var motivo = String(task.retraso || '').trim();
+  if (!taskId || !motivo || normalizeTaskStatus_(task.estado) !== 'en_proceso') return null;
+  var startedAt = normalizeDateTimeValue_(task.delayCurrentStart || task.fIni || task.fCrea || '');
+  if (!startedAt) {
+    var fecha = String(task.fecha || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) startedAt = fecha + 'T00:00:00';
+    else startedAt = nowIso_();
+  }
+  return sanitizeDelay_({ id: 'legacy_' + taskId, taskId: taskId, motivo: motivo, inicio: startedAt, fin: '', minutos: '', abiertaPor: String(task.creadoPor || '').trim(), cerradaPor: '', estado: 'activa' });
+}
+
+function findActiveDelayByTaskId_(info, taskId) {
+  var lookupTaskId = String(taskId || '').trim();
+  if (!lookupTaskId) return null;
+  for (var i = 0; i < info.records.length; i++) {
+    var entry = info.records[i];
+    var record = sanitizeDelay_(entry.record);
+    if (record.taskId === lookupTaskId && record.estado === 'activa') { return entry; }
+  }
+  return null;
+}
+
+function findDelayEntryForTask_(info, task, delayId) {
+  var lookupDelayId = String(delayId || task.delayCurrentId || '').trim();
+  if (lookupDelayId) {
+    var byId = findRecordById_(info, lookupDelayId);
+    if (byId && String(byId.record.taskId || '').trim() === task.id) return byId;
+  }
+  return findActiveDelayByTaskId_(info, task.id);
+}
+
+function writeRecord_(info, schema, rowNumber, record, sourceValues) {
+  var rowValues = sourceValues ? sourceValues.slice() : (rowNumber ? info.sheet.getRange(rowNumber, 1, 1, info.headers.length).getValues()[0] : new Array(info.headers.length).fill(''));
+  schema.forEach(function(field) {
+    var idx = info.columnMap[field.key];
+    if (idx !== -1) rowValues[idx] = record[field.key];
+  });
+  if (rowNumber) { info.sheet.getRange(rowNumber, 1, 1, info.headers.length).setValues([rowValues]); }
+  else { info.sheet.appendRow(rowValues); }
+}
+
+function deleteDelayRowsByTaskId_(taskId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.DELAYS);
+  if (!sheet) return;
+  var info = readSheetRecords_(sheet, DELAY_SCHEMA);
+  for (var i = info.records.length - 1; i >= 0; i--) {
+    var entry = info.records[i];
+    if (String(entry.record.taskId || '').trim() === taskId) { sheet.deleteRow(entry.rowNumber); }
+  }
+}
+
+function formatTime_(value) {
+  if (!value && value !== 0) return '';
+  if (value instanceof Date) { return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm'); }
+  var txt = String(value).trim();
+  var isoMatch = txt.match(/T(\d{2}:\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  var timeMatch = txt.match(/^(\d{1,2}:\d{2})/);
+  return timeMatch ? timeMatch[1].padStart(5, '0') : txt;
+}
+
+function sanitizeTask_(task) {
+  var delayCount = toNonNegativeInt_(task.delayCount, 0);
+  var delayTotalMinutes = toNonNegativeInt_(task.delayTotalMinutes, 0);
+  var delayActive = boolValue_(task.delayActive, false);
+  return {
+    id: String(task.id || '').trim(), fecha: task.fecha || '', tipo: String(task.tipo || '').trim(), obs: String(task.obs || '').trim(),
+    hi: formatTime_(task.hi), hf: formatTime_(task.hf), estado: normalizeTaskStatus_(task.estado), asig: String(task.asig || '').trim(),
+    dep: normalizeDepartment_(task.dep, 'operativo'), prio: boolValue_(task.prio, false),
+    pOrder: (task.pOrder === '' || task.pOrder === null || task.pOrder === undefined) ? '' : Number(task.pOrder),
+    fCrea: task.fCrea || '', fIni: task.fIni || '', fFin: task.fFin || '', creadoPor: String(task.creadoPor || '').trim(),
+    retraso: String(task.retraso || '').trim(), delayCount: delayCount, delayTotalMinutes: delayTotalMinutes,
+    delayActive: delayActive, delayCurrentId: delayActive ? String(task.delayCurrentId || '').trim() : '',
+    delayCurrentStart: delayActive ? normalizeDateTimeValue_(task.delayCurrentStart || '') : ''
+  };
+}
+
+function sanitizeDelay_(delay) {
+  var status = normalizeDelayStatus_(delay.estado);
+  return {
+    id: String(delay.id || '').trim(), taskId: String(delay.taskId || '').trim(), motivo: String(delay.motivo || '').trim(),
+    inicio: normalizeDateTimeValue_(delay.inicio || ''), fin: normalizeDateTimeValue_(delay.fin || ''),
+    minutos: delay.minutos === '' ? '' : toNonNegativeInt_(delay.minutos, 0), abiertaPor: String(delay.abiertaPor || '').trim(),
+    cerradaPor: String(delay.cerradaPor || '').trim(), estado: status
+  };
+}
+
+function sanitizeUserForClient_(user) {
+  var role = normalizeRole_(user.rol);
+  return {
+    id: String(user.id || '').trim(), nombre: String(user.nombre || '').trim(), rol: role,
+    dep: normalizeDepartment_(user.dep, role), activo: boolValue_(user.activo, true)
+  };
+}
+
+function normalizeRole_(value) {
+  var raw = String(value || 'operativo').trim().toLowerCase();
+  return (raw === 'admin' || raw === 'administrador') ? 'admin' : 'operativo';
+}
+
+function normalizeDepartment_(value, role) {
+  var raw = String(value || '').trim().toLowerCase();
+  if (role === 'admin' || raw === 'admin' || raw === 'todos') return 'admin';
+  return raw === 'deposito' ? 'deposito' : 'fabrica';
+}
+
+function userNeedsPin_(user) { return normalizeRole_(user.rol) === 'admin' || String(user.pinHash || '').trim() !== ''; }
+
+function isAdmin_(user) { return normalizeRole_(user && user.rol) === 'admin'; }
+
+function validateTaskAccess_(task, actor) {
+  if (isAdmin_(actor)) return;
+  var userDep = normalizeDepartment_(actor.dep, actor.rol);
+  if (userDep === 'admin') throw new Error('Departamento operativo invalido');
+  if (task.dep !== userDep) throw new Error('No podes modificar tareas de otro departamento');
+}
+
+function normalizeTaskStatus_(value) {
+  var raw = String(value || 'pendiente').trim().toLowerCase();
+  if (raw === 'enproceso' || raw === 'en_proceso' || raw === 'proceso') return 'en_proceso';
+  if (raw === 'terminado' || raw === 'finalizado' || raw === 'finalizada') return 'terminado';
+  return 'pendiente';
+}
+
+function normalizeDelayStatus_(value) {
+  var raw = String(value || 'activa').trim().toLowerCase();
+  return raw === 'cerrada' || raw === 'finalizada' ? 'cerrada' : 'activa';
+}
+
+function hasField_(obj, key) { return !!obj && Object.prototype.hasOwnProperty.call(obj, key); }
+
+function todayKey_() { return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+
+function nowIso_() { return new Date().toISOString(); }
+
+function issueSessionToken_(user) {
+  var userId = String(user.id || '').trim();
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put(sessionCacheKey_(userId, token), '1', SESSION_TTL_SECONDS);
+  return token;
+}
+
+function sessionCacheKey_(uid, token) { return 'session_' + normalizeKey(uid) + '_' + normalizeKey(token); }
+
+function hashPin_(pin) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pin, Utilities.Charset.UTF_8);
+  return digest.map(function(byte) { var n = byte < 0 ? byte + 256 : byte; return ('0' + n.toString(16)).slice(-2); }).join('');
+}
+
+function boolValue_(value, fallback) {
+  if (value === '' || value === null || value === undefined) return fallback;
+  if (typeof value === 'boolean') return value;
+  var raw = String(value).trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'si' || raw === 'x';
+}
+
+function toNonNegativeInt_(value, fallback) {
+  if (value === '' || value === null || value === undefined) return fallback;
+  var num = Number(value);
+  if (!isFinite(num)) return fallback;
+  return Math.max(0, Math.round(num));
+}
+
+function normalizeDateTimeValue_(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString();
+  var txt = String(value).trim();
+  if (!txt) return '';
+  var parsed = new Date(txt);
+  return isNaN(parsed.getTime()) ? txt : parsed.toISOString();
+}
+
+function diffMinutes_(startValue, endValue) {
+  var start = new Date(startValue); var end = new Date(endValue);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+  var diff = Math.round((end.getTime() - start.getTime()) / 60000);
+  if (diff <= 0 && end.getTime() > start.getTime()) return 1;
+  return Math.max(0, diff);
+}
+
+function isEmptyRow_(row) { return row.every(function(cell) { return cell === '' || cell === null; }); }
+
+function normalizeKey(value) {
+  return String(value || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+function jsonOutput(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }

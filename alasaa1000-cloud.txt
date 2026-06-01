@@ -1,0 +1,6 @@
+NOMBRE DEL PROYECTO: alasaa1000-cloud's Project
+ID DEL PROYECTO:yyuniovoywemybfzhwou
+URL DEL PROYECTO: https://yyuniovoywemybfzhwou.supabase.co
+URL de la API
+Punto final RESTful para consultar y administrar su base de datos : https://yyuniovoywemybfzhwou.supabase.co/rest/v1/
+anon public: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dW5pb3ZveXdlbXliZnpod291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTA1NjQsImV4cCI6MjA5NDY4NjU2NH0.PTfmdPGhBARgWKzzkSGwkSFQaid2Er_StEoKQNu4w38
