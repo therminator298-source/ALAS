@@ -63,8 +63,8 @@ async function bootstrap() {
     console.warn('Error loading users on boot:', e);
   }
 
-  // SSO: si no hay sesión PIN restaurada, intentar sesión del Launcher
-  if (!App.currentUser && typeof initSSO === 'function') {
+  // SSO: única forma de autenticación — si no hay token del Launcher, redirigir
+  if (typeof initSSO === 'function') {
     await initSSO();
   }
 
@@ -88,16 +88,11 @@ async function bootstrap() {
       toast('Error al sincronizar datos iniciales');
     }
   } else {
-    render();
-    setLoaderOverlayState({
-      title: 'Acceso listo',
-      detail: 'La pantalla de ingreso ya esta preparada para trabajar.',
-      loginState: 'done',
-      loginText: 'Usuarios disponibles',
-      opsState: 'done',
-      opsText: 'Interfaz operativa precargada'
-    });
-    hideLoaderOverlay();
+    // Sin sesión SSO → redirigir al Launcher
+    const launcherUrl = (typeof ALAS_SSO_CONFIG !== 'undefined' && ALAS_SSO_CONFIG.launcherUrl)
+      ? ALAS_SSO_CONFIG.launcherUrl
+      : 'https://launcher-tawny.vercel.app';
+    window.location.href = launcherUrl;
   }
 }
 
