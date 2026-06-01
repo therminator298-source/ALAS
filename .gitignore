@@ -1,13 +1,7 @@
 node_modules/
 
-# Configuración local — NO commitear (contienen secretos)
-sso-config.js
-supabase-config.js
-
-# Bundles generados por build.js
-app.*.min.js
-supabase-lib.*.min.js
-styles.*.min.css
+# Configuración local de desarrollo únicamente
+# supabase-config.js y sso-config.js se commitean con valores de producción
 
 .env
 .env.local
