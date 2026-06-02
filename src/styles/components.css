@@ -2603,12 +2603,20 @@ tr:hover td {
   opacity: 0;
   pointer-events: none;
 }
+.vw.dept-exiting {
+  animation: dept-exit 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+@keyframes dept-exit {
+  to { opacity: 0; transform: translateY(-5px); }
+}
+
 .vw.dept-entering {
-  animation: dept-enter 0.3s ease-out;
+  animation: dept-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes dept-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(8px) scale(0.998); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ====== Custom Modals ====== */
@@ -3391,13 +3399,11 @@ tr:hover td {
 /* ===== VIEW TRANSITIONS ===== */
 .dept-switching {
   opacity: 0;
+  pointer-events: none;
 }
+/* Consolidado en el bloque .vw.dept-entering de arriba */
 .dept-entering {
-  animation: vw-slide-in .28s ease-out;
-}
-@keyframes vw-slide-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  animation: dept-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ===== INPUT FOCUS EFFECTS ===== */

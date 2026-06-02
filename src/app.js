@@ -182,10 +182,13 @@ function installClientGuards() {
 function hideLoaderOverlay() {
   const loader = document.getElementById('loader');
   if (!loader) return;
-  
+
+  // Fade in app layout al mismo tiempo que el loader se oculta
+  document.querySelector('.app-container')?.classList.add('alas-ready');
+
   loader.style.opacity = '0';
   loader.style.pointerEvents = 'none';
-  
+
   if (loader._hideTimer) clearTimeout(loader._hideTimer);
   loader._hideTimer = setTimeout(() => {
     if (loader.style.opacity === '0') {
@@ -1336,19 +1339,25 @@ function setView(v) {
   const prevEl = document.getElementById('v-' + App.view);
   App.view = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.v === v));
-  document.querySelectorAll('.vw').forEach(el => el.classList.remove('on'));
   updateTopTitle();
 
   const nextEl = document.getElementById('v-' + v);
   if (nextEl && prevEl && prevEl !== nextEl) {
+    // Exit: salida suave de la vista anterior
+    prevEl.classList.add('dept-exiting');
+    document.querySelectorAll('.vw').forEach(el => { if (el !== prevEl) el.classList.remove('on'); });
+    setTimeout(() => prevEl.classList.remove('on', 'dept-exiting'), 150);
+
+    // Enter: nueva vista entra tras el render
     nextEl.classList.add('on', 'dept-switching');
     requestAnimationFrame(() => {
       render();
       nextEl.classList.remove('dept-switching');
       nextEl.classList.add('dept-entering');
-      setTimeout(() => nextEl.classList.remove('dept-entering'), 300);
+      setTimeout(() => nextEl.classList.remove('dept-entering'), 320);
     });
   } else {
+    document.querySelectorAll('.vw').forEach(el => el.classList.remove('on'));
     nextEl?.classList.add('on');
     render();
   }

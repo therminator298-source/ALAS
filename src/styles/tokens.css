@@ -51,10 +51,22 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.3s ease;
-  --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Transitions — alineadas con ALAS Motion System */
+  --transition-fast:   0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow:   0.4s  cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-bounce: 0.4s  cubic-bezier(0.34, 1.15, 0.64, 1); /* spring sin overshoot */
+
+  /* ALAS Motion System — tokens compartidos */
+  --alas-dur-instant:  100ms;
+  --alas-dur-fast:     150ms;
+  --alas-dur-normal:   250ms;
+  --alas-dur-slow:     400ms;
+  --alas-dur-page:     420ms;
+  --alas-dur-view:     300ms;
+  --alas-ease-expo:    cubic-bezier(0.16, 1, 0.3, 1);
+  --alas-ease-spring:  cubic-bezier(0.34, 1.15, 0.64, 1);
+  --alas-ease-in:      cubic-bezier(0.4, 0, 1, 1);
 }
 
 /* ===== RESET & BASE ===== */

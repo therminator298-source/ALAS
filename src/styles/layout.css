@@ -5,6 +5,43 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  /* ALAS Motion: invisible + desplazado hasta que alas-ready se agrega */
+  opacity: 0;
+  transform: translateY(10px) scale(0.99);
+  transition:
+    opacity   0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform 0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.app-container.alas-ready {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Entrada escalonada interna: solo transform, el padre maneja opacity ─── */
+/* Uso animation (no transition) para no pisar estilos existentes de sidebar */
+.app-container.alas-ready .sidebar {
+  animation: alasSidebarIn 0.52s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+.app-container.alas-ready .main-content-wrapper {
+  animation: alasContentIn 0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.06s both;
+}
+
+@keyframes alasSidebarIn {
+  from { transform: translateX(-10px); }
+  to   { transform: none; }
+}
+@keyframes alasContentIn {
+  from { transform: translateY(8px); }
+  to   { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-container,
+  .app-container.alas-ready .sidebar,
+  .app-container.alas-ready .main-content-wrapper {
+    transition: none; transform: none; opacity: 1; animation: none;
+  }
 }
 
 .sidebar {
