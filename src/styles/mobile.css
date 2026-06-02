@@ -2127,6 +2127,7 @@
   .mob-notif-overlay.open { display: block; }
 
   .mob-notif-sheet {
+    display: flex; /* reactiva el elemento en mobile */
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 4001;
     background: var(--bg-surface);
     border-radius: 20px 20px 0 0;

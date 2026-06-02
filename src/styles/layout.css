@@ -7,6 +7,13 @@ body {
   padding: 16px;
 }
 
+/* Elementos mobile-only: ocultos globalmente fuera del app-container.
+   La media query en mobile.css los reactiva con display:flex cuando corresponde. */
+.mob-notif-sheet,
+.mob-notif-overlay {
+  display: none;
+}
+
 .app-container {
   display: flex;
   height: calc(100vh - 32px);
