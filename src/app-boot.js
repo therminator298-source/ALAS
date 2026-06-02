@@ -87,6 +87,11 @@ async function bootstrap() {
       console.warn('Error during boot sync:', e);
       toast('Error al sincronizar datos iniciales');
     }
+
+    // ALASMotionBridge — animar entrada del app-container cuando los datos están listos
+    if (typeof window.ALASTransition !== 'undefined') {
+      ALASTransition.enterProject();
+    }
   } else {
     // Sin sesión SSO → redirigir al Launcher
     const launcherUrl = (typeof ALAS_SSO_CONFIG !== 'undefined' && ALAS_SSO_CONFIG.launcherUrl)
