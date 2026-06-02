@@ -133,18 +133,7 @@ body {
 }
 
 .sidebar-profile {
-  width: 100%;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition:
-    max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity    0.25s ease;
-}
-
-.sidebar:hover .sidebar-profile {
-  max-height: 90px;
-  opacity: 1;
+  display: none;
 }
 
 /* nav-sep: etiquetas de sección — ocultas cuando colapsado */
