@@ -7,10 +7,13 @@ body {
   padding: 16px;
 }
 
-/* Elementos mobile-only: ocultos globalmente fuera del app-container.
-   La media query en mobile.css los reactiva con display:flex cuando corresponde. */
+/* Elementos mobile-only: todos ocultos globalmente — están fuera del app-container
+   en el HTML y sin display:none en desktop causarían contenido visible.
+   La media query en mobile.css los reactiva con display:flex/.open cuando corresponde. */
 .mob-notif-sheet,
-.mob-notif-overlay {
+.mob-notif-overlay,
+.mob-new-task,
+.mob-task-detail {
   display: none;
 }
 
