@@ -132,6 +132,10 @@ body {
   margin-top: 0;
 }
 
+.sidebar-spacer {
+  flex: 1;
+}
+
 .sidebar-profile {
   display: none;
 }
