@@ -88,10 +88,6 @@
       0%, 100% { transform: translateY(0px); }
       50% { transform: translateY(-4px); }
     }
-    /* Mostrar tarjeta de usuario al expandir el sidebar (hover) */
-    .sidebar:hover .sidebar-profile {
-      display: flex;
-    }
   </style>
   
   
@@ -120,6 +116,30 @@
   
   
   <link rel="stylesheet" href="styles.7672d2d8.min.css">
+  <style>
+    /* Tarjeta de usuario: avatar siempre visible; info+logout solo al expandir */
+    .sidebar-profile {
+      display: flex !important;
+      padding: 4px 8px 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .sidebar-profile .user-card {
+      justify-content: center;
+    }
+    .sidebar-profile .user-card-info,
+    .sidebar-profile .user-card-logout {
+      display: none;
+      overflow: hidden;
+    }
+    .sidebar:hover .sidebar-profile .user-card {
+      justify-content: flex-start;
+    }
+    .sidebar:hover .sidebar-profile .user-card-info,
+    .sidebar:hover .sidebar-profile .user-card-logout {
+      display: flex;
+    }
+  </style>
 </head>
 
 <body>
