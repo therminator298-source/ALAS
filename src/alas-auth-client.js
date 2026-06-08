@@ -25,12 +25,8 @@ async function sso_verifyToken(token) {
   try {
     const res  = await fetch(VERIFY_URL, {
       method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'apikey':        SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-      },
-      body: JSON.stringify({ token }),
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+      body:    JSON.stringify({ token }),
     });
     const data = await res.json();
     if (!data.valid) {
