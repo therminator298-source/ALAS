@@ -11,56 +11,33 @@
 // ============================================================
 
 /* ── Configuración ──────────────────────────────────────────────────────── */
-// Lee desde sso-config.js (cargado en index.html antes del bundle, no commiteado).
-// ALAS_SSO_CONFIG es una var global definida en ese archivo.
 const _ssoCfg      = (typeof ALAS_SSO_CONFIG !== 'undefined' && ALAS_SSO_CONFIG) || {};
-const SSO_SECRET      = _ssoCfg.secret      || 'REEMPLAZAR-EN-PRODUCCION';
 const SSO_SESSION_KEY = 'alas.sso.session';
 const LAUNCHER_URL    = _ssoCfg.launcherUrl || 'http://localhost:5173';
 
-/* ── Utilidades base64url ───────────────────────────────────────────────── */
-function sso_fromBase64url(str) {
-  let padded = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (padded.length % 4) padded += '=';
-  return atob(padded);
-}
+// Verificación server-side: el secreto vive solo en Supabase, nunca en el cliente.
+const VERIFY_URL    = 'https://xkgumqztscqcwamtimuh.supabase.co/functions/v1/verify-sso-token';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrZ3VtcXp0c2NxY3dhbXRpbXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDc0MjEsImV4cCI6MjA5NTg4MzQyMX0.ncD9XUgR6VDhKiShPAwdNgp3tRoKWIlt4JFEq8audX8';
 
-/* ── HMAC-SHA-256 ───────────────────────────────────────────────────────── */
-async function sso_importKey(secret) {
-  return crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-}
-
+/* ── Verificación remota via Edge Function ──────────────────────────────── */
 async function sso_verifyToken(token) {
   if (!token || typeof token !== 'string') return null;
-  const dot = token.lastIndexOf('.');
-  if (dot < 1) return null;
-
-  const payloadB64 = token.slice(0, dot);
-  const sigB64     = token.slice(dot + 1);
-
   try {
-    const key      = await sso_importKey(SSO_SECRET);
-    const sigBytes = Uint8Array.from(sso_fromBase64url(sigB64), c => c.charCodeAt(0));
-    const valid    = await crypto.subtle.verify(
-      'HMAC', key, sigBytes,
-      new TextEncoder().encode(payloadB64)
-    );
-    if (!valid) {
-      console.warn('[ALAS SSO] Firma inválida — token rechazado.');
+    const res  = await fetch(VERIFY_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'apikey':        SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+      },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!data.valid) {
+      console.warn('[ALAS SSO] Token rechazado por el servidor.');
       return null;
     }
-    const payload = JSON.parse(decodeURIComponent(escape(sso_fromBase64url(payloadB64))));
-    if (Date.now() > payload.exp) {
-      console.warn('[ALAS SSO] Token expirado.');
-      return null;
-    }
-    return payload;
+    return data.payload;
   } catch (e) {
     console.warn('[ALAS SSO] Error al verificar token:', e.message);
     return null;
