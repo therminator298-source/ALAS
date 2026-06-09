@@ -20,17 +20,17 @@
   var _rootSel = null
 
   // ── Valores del movimiento ─────────────────────────────────────────────────
-  var X_OUT  = '110px'   // distancia horizontal fuera de pantalla (push dramático)
-  var SC_OUT = '0.94'    // escala reducida cuando está fuera
-  var BL_OUT = '8px'     // blur al estar fuera
+  var X_OUT  = '80px'    // distancia horizontal — estándar ecosistema (--alas-ease)
+  var SC_OUT = '0.96'    // escala — estándar ecosistema
+  var BL_OUT = '5px'     // blur — estándar ecosistema
 
-  // Entrada: desde derecha → centro, lenta y cinematográfica
-  var DUR_IN  = 800
-  var ESE_IN  = 'cubic-bezier(0.22, 1, 0.36, 1)'
+  // Entrada: --alas-dur-module / --alas-ease
+  var DUR_IN  = 680
+  var ESE_IN  = 'cubic-bezier(0.16, 1, 0.3, 1)'
 
-  // Salida: desde centro → derecha, fluida pero decisiva
-  var DUR_OUT = 550
-  var ESE_OUT = 'cubic-bezier(0.55, 0, 0.8, 0.35)'
+  // Salida: --alas-dur-page / --alas-ease-in
+  var DUR_OUT = 420
+  var ESE_OUT = 'cubic-bezier(0.4, 0, 1, 1)'
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function reduced() {

@@ -30,8 +30,8 @@ body {
   opacity: 0;
   transform: translateY(10px) scale(0.99);
   transition:
-    opacity   0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)),
-    transform 0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+    opacity   var(--alas-dur-page) var(--alas-ease),
+    transform var(--alas-dur-page) var(--alas-ease);
 }
 
 .app-container.alas-ready {
@@ -42,10 +42,10 @@ body {
 /* ── Entrada escalonada interna: solo transform, el padre maneja opacity ─── */
 /* Uso animation (no transition) para no pisar estilos existentes de sidebar */
 .app-container.alas-ready .sidebar {
-  animation: alasSidebarIn 0.52s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  animation: alasSidebarIn var(--alas-dur-page) var(--alas-ease) both;
 }
 .app-container.alas-ready .main-content-wrapper {
-  animation: alasContentIn 0.55s var(--alas-ease-expo, cubic-bezier(0.16, 1, 0.3, 1)) 0.06s both;
+  animation: alasContentIn var(--alas-dur-page) var(--alas-ease) 0.06s both;
 }
 
 @keyframes alasSidebarIn {
@@ -77,7 +77,7 @@ body {
   border-right: none;
   box-shadow: 3px 0 10px rgba(0, 0, 0, 0.12), inset -1px 0 0 rgba(255, 255, 255, 0.06);
   z-index: 20;
-  transition: width 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--alas-dur-normal) var(--alas-ease);
   flex-shrink: 0;
 }
 
@@ -103,9 +103,9 @@ body {
   padding: 0;
   opacity: 0;
   transition:
-    max-height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity    0.28s ease,
-    margin-bottom 0.38s ease;
+    max-height    var(--alas-dur-normal) var(--alas-ease),
+    opacity       var(--alas-dur-normal) var(--alas-ease),
+    margin-bottom var(--alas-dur-normal) var(--alas-ease);
 }
 
 .sidebar:hover .sidebar-logo {
@@ -162,8 +162,8 @@ body {
   opacity: 0;
   transform: translateX(-8px);
   transition:
-    opacity   0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.08s,
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.08s;
+    opacity   var(--alas-dur-normal) var(--alas-ease) var(--alas-stagger),
+    transform var(--alas-dur-normal) var(--alas-ease) var(--alas-stagger);
 }
 
 .sidebar:hover .nav-sep {
@@ -188,7 +188,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   flex-shrink: 0;
-  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+  transition: background var(--alas-dur-fast) var(--alas-ease), color var(--alas-dur-fast) var(--alas-ease);
   min-height: unset;
   max-width: unset;
   margin: 0;
@@ -219,7 +219,7 @@ body {
   justify-content: center;
   flex-shrink: 0;
   opacity: 1;
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--alas-dur-fast) var(--alas-ease);
 }
 
 .tab-icon svg {
@@ -248,8 +248,8 @@ body {
   opacity: 0;
   transform: translateX(-8px);
   transition:
-    opacity   0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.08s,
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.08s;
+    opacity   var(--alas-dur-normal) var(--alas-ease) var(--alas-stagger),
+    transform var(--alas-dur-normal) var(--alas-ease) var(--alas-stagger);
 }
 
 .sidebar:hover .tab-text {
@@ -380,13 +380,22 @@ body {
   border-radius: 50%;
   background: var(--status-ok);
   box-shadow: 0 0 0 3px var(--status-ok-bg);
-  animation: pulseStatus 2s infinite;
+  position: relative;
+}
+
+.status-dot::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.4);
+  animation: pulseStatus 2s var(--alas-ease-inout) infinite;
 }
 
 @keyframes pulseStatus {
-  0%   { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0.4); }
-  70%  { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0); }
+  0%   { transform: scale(0.5); opacity: 0.8; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(0.5); opacity: 0; }
 }
 
 .status-bar {
@@ -495,7 +504,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  transition: box-shadow .15s ease, transform .15s ease;
+  transition: transform var(--alas-dur-fast) var(--alas-ease);
   position: relative;
   overflow: hidden;
 }
@@ -724,7 +733,7 @@ body {
   min-height: 0;
   padding: 12px 6px 8px;
   cursor: pointer;
-  transition: background 0.22s cubic-bezier(.22,1,.36,1), border-color 0.22s cubic-bezier(.22,1,.36,1), box-shadow 0.22s cubic-bezier(.22,1,.36,1), transform 0.15s ease;
+  transition: transform var(--alas-dur-fast) var(--alas-ease);
   border: 1px solid var(--border-light);
   position: relative;
   background: var(--bg-surface);
@@ -871,7 +880,7 @@ body {
   font-size: 12.5px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s cubic-bezier(.22,1,.36,1), filter .18s ease, border-color .18s ease;
+  transition: transform var(--alas-dur-fast) var(--alas-ease), filter var(--alas-dur-fast) var(--alas-ease);
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -949,7 +958,7 @@ body {
   flex: 1;
   padding: 12px 14px;
   background: var(--bg-app);
-  animation: rpIn 0.22s cubic-bezier(.22,1,.36,1);
+  animation: rpIn var(--alas-dur-fast) var(--alas-ease);
   min-width: 0;
 }
 

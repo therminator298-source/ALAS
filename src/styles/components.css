@@ -13,7 +13,7 @@
   border: 1px solid var(--border-color);
   border-left: 3px solid var(--text-muted);
   margin-bottom: 5px;
-  transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+  transition: transform var(--alas-dur-fast) var(--alas-ease);
   background: var(--bg-surface);
   overflow: hidden;
   cursor: pointer;
@@ -81,7 +81,7 @@
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: background .15s ease, transform .12s ease, box-shadow .12s ease;
+  transition: background var(--alas-dur-fast) var(--alas-ease), transform var(--alas-dur-fast) var(--alas-ease);
   white-space: nowrap;
   display: flex;
   align-items: center;
