@@ -249,29 +249,9 @@
       
       <div class="sidebar-spacer"></div>
 
-      <div class="sidebar-profile" style="padding-bottom: 8px; width: 100%; box-sizing: border-box;">
-        <div class="user-card" style="width: 100%; box-sizing: border-box;">
-          <div class="user-card-avatar" id="sidebarAvatar">
-            --
-            <div class="online-dot"></div>
-          </div>
-          <div class="user-card-info">
-            <div class="user-card-name" id="sidebarUserName">Usuario</div>
-            <div class="user-card-role" id="sidebarUserRole">
-              <svg class="shield-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              Rol
-            </div>
-          </div>
-          <button class="user-card-logout" onclick="logout()" title="Cerrar sesión">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>
-        </div>
+      <div id="ssoUserChip" style="display:flex;width:100%;padding:6px 12px;align-items:center;gap:13px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;flex-shrink:0;margin-bottom:4px;pointer-events:none;cursor:default;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="21" height="21" stroke-width="1.6" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+        <span id="sidebarUserName" style="font-size:12px;font-weight:600;letter-spacing:.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Usuario</span>
       </div>
 
       <a class="tab" href="https://launcher-tawny.vercel.app" id="btnVolverMenu" title="Volver al Menú" onclick="alasGoToLauncher(); return false;" style="margin-bottom: 8px;">
