@@ -1,134 +1,121 @@
+// Migra los datos de Google Sheets (Apps Script) al proyecto Supabase.
+// Requisito: las tablas ya deben existir -> correr scripts/setup.sql en el SQL Editor.
+//   node scripts/migrate.js
+const fs = require('fs');
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = 'https://yyuniovoywemybfzhwou.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dW5pb3ZveXdlbXliZnpod291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTA1NjQsImV4cCI6MjA5NDY4NjU2NH0.PTfmdPGhBARgWKzzkSGwkSFQaid2Er_StEoKQNu4w38';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyPCyvgwe_2UKo-zQORmUTermBj0ofJQtzC6oiucXdSLus4PkFoeaQR84kOUDxdYwNY/exec';
+// Las credenciales se leen de los mismos archivos que usa el navegador para que
+// la migracion nunca apunte a un proyecto distinto al de la app.
+function loadBrowserConfig(file) {
+  const win = {};
+  const code = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+  new Function('window', code)(win);
+  return win;
+}
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const { SUPABASE_CONFIG } = loadBrowserConfig('supabase-config.js');
+const { APP_CONFIG } = loadBrowserConfig('config.js');
+
+const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
   auth: { persistSession: false }
 });
 
-async function fetchFromGAS(endpoint) {
-  const url = `${GAS_URL}?endpoint=${endpoint}&_ts=${Date.now()}`;
+// El Apps Script espera ?resource=<nombre>&_key=<appKey> (no "endpoint").
+async function fetchFromGAS(resource) {
+  const url = `${APP_CONFIG.gasUrl}?resource=${encodeURIComponent(resource)}`
+    + `&_key=${encodeURIComponent(APP_CONFIG.gasAppKey)}&_ts=${Date.now()}`;
   const res = await fetch(url);
   const text = await res.text();
   let data;
   try {
     data = JSON.parse(text);
   } catch {
-    data = text;
+    throw new Error(`${resource}: respuesta no-JSON (${text.slice(0, 80)})`);
   }
-  if (data && data.status === 'error') throw new Error(data.message || `Error en ${endpoint}`);
-  return Array.isArray(data) ? data : data.data || [];
+  if (data && data.status === 'error') throw new Error(data.message || `Error en ${resource}`);
+  return Array.isArray(data) ? data : (data.data || []);
+}
+
+async function upsertBatched(table, rows, size = 50) {
+  for (let i = 0; i < rows.length; i += size) {
+    const { error } = await supabase.from(table).upsert(rows.slice(i, i + size), { onConflict: 'id' });
+    if (error) throw new Error(`${table} lote ${Math.floor(i / size) + 1}: ${error.message}`);
+  }
 }
 
 async function migrate() {
-  console.log('Iniciando migracion de Google Sheets a Supabase...\n');
+  console.log(`Migrando Google Sheets -> ${SUPABASE_CONFIG.url}\n`);
 
-  // 1. Migrar usuarios
-  console.log('1. Cargando usuarios desde Google Sheets...');
-  let gasUsers;
-  try {
-    gasUsers = await fetchFromGAS('usuarios');
-  } catch (e) {
-    console.log('   Fallo endpoint usuarios, probando con carga completa...');
-    const all = await fetchFromGAS('tareas');
-    console.log(`   Obtenidos ${Array.isArray(all) ? all.length : 0} registros (tareas, no usuarios)`);
-    gasUsers = [];
-  }
-  console.log(`   Usuarios obtenidos: ${gasUsers.length}`);
+  console.log('1. Usuarios...');
+  const gasUsers = await fetchFromGAS('usuarios');
+  const usuarios = gasUsers.map(u => ({
+    id: u.id,
+    nombre: u.nombre,
+    rol: String(u.rol || 'operativo').toLowerCase(),
+    dep: u.dep || 'fabrica',
+    activo: u.activo !== false,
+    pin_hash: u.pin_hash || u.pinHash || null
+  })).filter(u => u.id && u.nombre);
+  await upsertBatched('usuarios', usuarios);
+  console.log(`   ${usuarios.length} usuarios migrados`);
 
-  if (gasUsers.length > 0) {
-    const usersForSupabase = gasUsers.map(u => ({
-      id: u.id || u[0],
-      nombre: u.nombre || u.nm || u[1],
-      rol: (u.rol || u[3] || 'operativo').toLowerCase(),
-      dep: u.dep || u[4] || 'fabrica',
-      activo: u.activo !== false && u[5] !== false
-    })).filter(u => u.id && u.nombre);
+  console.log('2. Tareas...');
+  const gasTasks = await fetchFromGAS('tareas');
+  const tareas = gasTasks.map(t => {
+    const k = t.tarea || t;
+    return {
+      id: k.id,
+      fecha: k.fecha || '',
+      tipo: k.tipo || '',
+      obs: k.obs || '',
+      hi: k.hi || '',
+      hf: k.hf || '',
+      estado: k.estado || 'pendiente',
+      asig: k.asig || '',
+      dep: k.dep || 'fabrica',
+      prio: !!k.prio,
+      pOrder: k.pOrder != null && k.pOrder !== '' ? Number(k.pOrder) : null,
+      fCrea: k.fCrea || '',
+      fIni: k.fIni || '',
+      fFin: k.fFin || '',
+      creadoPor: k.creadoPor || '',
+      retraso: k.retraso || '',
+      delayCount: Number(k.delayCount) || 0,
+      delayTotalMinutes: Number(k.delayTotalMinutes) || 0,
+      delayActive: !!k.delayActive,
+      delayCurrentId: k.delayCurrentId || '',
+      delayCurrentStart: k.delayCurrentStart || ''
+    };
+  }).filter(t => t.id);
+  await upsertBatched('tareas', tareas);
+  console.log(`   ${tareas.length} tareas migradas`);
 
-    const { data, error } = await supabase.from('usuarios').upsert(usersForSupabase, { onConflict: 'id' });
-    if (error) {
-      console.error('   Error insertando usuarios:', error.message);
-    } else {
-      console.log(`   Usuarios migrados: ${usersForSupabase.length}`);
-    }
-  }
+  console.log('3. Demoras...');
+  const gasDelays = await fetchFromGAS('demoras');
+  // Solo las demoras cuya tarea existe: "taskId" tiene FK contra tareas(id).
+  const taskIds = new Set(tareas.map(t => t.id));
+  const demoras = gasDelays.map(d => ({
+    id: d.id,
+    taskId: d.taskId,
+    motivo: d.motivo || '',
+    inicio: d.inicio || new Date().toISOString(),
+    fin: d.fin || null,
+    minutos: Number(d.minutos) || 0,
+    abiertaPor: d.abiertaPor || '',
+    cerradaPor: d.cerradaPor || '',
+    estado: d.estado || 'cerrada'
+  })).filter(d => d.id && taskIds.has(d.taskId));
+  if (demoras.length) await upsertBatched('demoras', demoras);
+  console.log(`   ${demoras.length} demoras migradas (de ${gasDelays.length} en la hoja)`);
 
-  // 2. Crear admin por defecto (si no existe)
-  const enc = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode('1234'));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const defaultPinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  const { data: existingAdmin } = await supabase.from('usuarios').select('id').eq('id', 'admin_default').single();
-  if (!existingAdmin) {
-    await supabase.from('usuarios').upsert({
-      id: 'admin_default',
-      nombre: 'Administrador',
-      rol: 'admin',
-      dep: 'admin',
-      activo: true,
-      pin_hash: defaultPinHash
-    }, { onConflict: 'id' });
-    console.log('   Admin por defecto creado (PIN: 1234)');
-  }
-
-  // 3. Migrar tareas
-  console.log('\n2. Cargando tareas desde Google Sheets...');
-  let gasTasks;
-  try {
-    gasTasks = await fetchFromGAS('tareas');
-  } catch (e) {
-    console.log('   Error cargando tareas:', e.message);
-    gasTasks = [];
-  }
-  console.log(`   Tareas obtenidas: ${gasTasks.length}`);
-
-  if (gasTasks.length > 0) {
-    const tasksForSupabase = gasTasks.map(t => {
-      const task = t.tarea || t;
-      return {
-        id: task.id || task[0],
-        fecha: task.fecha || task[1] || '',
-        tipo: task.tipo || task[2] || '',
-        obs: task.obs || task[3] || '',
-        hi: task.hi || task[4] || '',
-        hf: task.hf || task[5] || '',
-        estado: task.estado || task[6] || 'pendiente',
-        asig: task.asig || task[7] || '',
-        dep: task.dep || task[8] || 'fabrica',
-        prio: !!(task.prio || task[9]),
-        pOrder: task.pOrder != null ? Number(task.pOrder) : null,
-        fCrea: task.fCrea || task[10] || '',
-        fIni: task.fIni || task[11] || '',
-        fFin: task.fFin || task[12] || '',
-        creadoPor: task.creadoPor || task[13] || '',
-        retraso: task.retraso || task[14] || '',
-        delayCount: Number(task.delayCount || task[15]) || 0,
-        delayTotalMinutes: Number(task.delayTotalMinutes || task[16]) || 0,
-        delayActive: !!(task.delayActive || task[17]),
-        delayCurrentId: task.delayCurrentId || task[18] || '',
-        delayCurrentStart: task.delayCurrentStart || task[19] || ''
-      };
-    }).filter(t => t.id);
-
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < tasksForSupabase.length; i += BATCH_SIZE) {
-      const batch = tasksForSupabase.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.from('tareas').upsert(batch, { onConflict: 'id' });
-      if (error) {
-        console.error(`   Error lote ${i / BATCH_SIZE + 1}: ${error.message}`);
-      }
-    }
-    console.log(`   Tareas migradas: ${tasksForSupabase.length}`);
-  }
-
-  console.log('\nMigracion completada.');
-  console.log('Verifica en Supabase Table Editor que los datos esten cargados.');
+  console.log('\nMigracion completada. Verifica en el Table Editor de Supabase.');
 }
 
 migrate().catch(e => {
-  console.error('Migracion fallida:', e);
+  console.error('\nMigracion fallida:', e.message);
+  if (/schema cache|does not exist/i.test(e.message)) {
+    console.error('Falta el esquema: corre scripts/setup.sql en el SQL Editor del proyecto.');
+  }
   process.exit(1);
 });

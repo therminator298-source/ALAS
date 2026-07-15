@@ -1,6 +1,6 @@
 (function() {
   window.SUPABASE_CONFIG = Object.freeze({
-    url: 'https://yyuniovoywemybfzhwou.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dW5pb3ZveXdlbXliZnpod291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTA1NjQsImV4cCI6MjA5NDY4NjU2NH0.PTfmdPGhBARgWKzzkSGwkSFQaid2Er_StEoKQNu4w38'
+    url: 'https://fdcumrdbnrjpbfbrxqiw.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkY3VtcmRibnJqcGJmYnJ4cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTU1NjAsImV4cCI6MjA5OTYzMTU2MH0.YHsYBm-pnzu53BiZFikQef4CEYDzxGoToL_J4iH1wgY'
   });
 })();

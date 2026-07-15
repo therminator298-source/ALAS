@@ -236,9 +236,23 @@ function saveTasksToCache() {
 function getDataSourceErrorMessage(error, fallback = 'No se pudo conectar con el servidor de datos') {
   const msg = String(error?.message || '').trim();
   const lower = msg.toLowerCase();
+  // El backend activo decide el texto: culpar siempre a Google Sheets ocultaba
+  // fallas reales de Supabase (p. ej. proyecto inexistente o tablas faltantes).
+  const onSupabase = isSupabaseReady();
+  const fuente = onSupabase ? 'Supabase' : 'Google Sheets';
+  const revisa = onSupabase
+    ? 'Verifica la conexion y que el proyecto de Supabase siga activo.'
+    : 'Verifica la conexion y el estado del Apps Script publicado.';
+
   if (lower.includes('timeout')) {
-    return 'Google Sheets est\u00e1 respondiendo lento. Espera unos segundos y vuelve a intentar.';
+    return fuente + ' esta respondiendo lento. Espera unos segundos y vuelve a intentar.';
   }
+
+  // Tabla ausente en Supabase (PostgREST): el esquema no fue creado todavia.
+  if (onSupabase && (lower.includes('schema cache') || lower.includes('pgrst205'))) {
+    return 'Faltan las tablas en Supabase. Ejecuta scripts/setup.sql en el SQL Editor del proyecto.';
+  }
+
   const isFetchError = !msg ||
     lower.includes('failed to fetch') ||
     lower.includes('load failed') ||
@@ -248,11 +262,11 @@ function getDataSourceErrorMessage(error, fallback = 'No se pudo conectar con el
     lower.includes('timeout');
 
   if (window.location.protocol === 'file:') {
-    return 'No se pudo cargar la lista desde Google Sheets. Verifica tu conexion a internet y que el Apps Script siga publicado.';
+    return 'No se pudo cargar la lista desde ' + fuente + '. Verifica tu conexion a internet. ' + revisa;
   }
 
   if (isFetchError) {
-    return 'No se pudo cargar la lista desde Google Sheets. Verifica la conexion y el estado del Apps Script publicado.';
+    return 'No se pudo cargar la lista desde ' + fuente + '. ' + revisa;
   }
 
   return msg || fallback;
