@@ -63,7 +63,8 @@ async function bootstrap() {
     console.warn('Error loading users on boot:', e);
   }
 
-  // SSO: única forma de autenticación — si no hay token del Launcher, redirigir
+  // SSO opcional: si viene con token del Launcher, entra directo y se saltea el
+  // login. Si no, NO se rebota: el modulo es de acceso abierto por enlace directo.
   if (typeof initSSO === 'function') {
     await initSSO();
   }
@@ -93,11 +94,13 @@ async function bootstrap() {
       ALASTransition.enterProject();
     }
   } else {
-    // Sin sesión SSO → redirigir al Launcher
-    const launcherUrl = (typeof ALAS_SSO_CONFIG !== 'undefined' && ALAS_SSO_CONFIG.launcherUrl)
-      ? ALAS_SSO_CONFIG.launcherUrl
-      : 'https://launcher-tawny.vercel.app';
-    window.location.href = launcherUrl;
+    // Sin sesion SSO: antes se rebotaba al Launcher, lo que impedia entrar por
+    // enlace directo. Ahora se baja el loader y queda a la vista el login local
+    // (la lista de usuarios, que ya esta en el DOM y no pide PIN).
+    hideLoaderOverlay();
+    if (typeof window.ALASTransition !== 'undefined') {
+      ALASTransition.enterProject();
+    }
   }
 }
 

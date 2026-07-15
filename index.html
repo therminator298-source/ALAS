@@ -27,31 +27,22 @@
       z-index: 99999;
       transition: opacity 0.4s ease;
     }
+    /* Loader de entrada: mismo patron minimalista que Inventario (logo + barra),
+       sobre el fondo oscuro propio del Calendario. */
     .custom-loader-box {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 22px;
     }
-    .custom-loader-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 18px;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: custom-float 2.5s ease-in-out infinite;
-    }
-    .custom-loader-icon svg {
-      width: 30px;
-      height: 30px;
+    .custom-loader-logo {
+      height: 46px;
+      opacity: 0.9;
     }
     .custom-loader-line {
-      width: 90px;
-      height: 2px;
-      background: rgba(255,255,255,0.08);
+      width: 150px;
+      height: 4px;
+      background: rgba(255,255,255,0.10);
       border-radius: 999px;
       overflow: hidden;
       position: relative;
@@ -62,31 +53,13 @@
       left: -40%;
       width: 40%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, #60a5fa, #fff);
+      background: #60a5fa;
       border-radius: 999px;
-      animation: custom-loading 1.2s ease infinite;
-    }
-    .custom-loader-text {
-      color: rgba(255,255,255,0.55);
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
-    }
-    .custom-loader-detail {
-      font-size: 11px;
-      color: rgba(255,255,255,0.35);
-      text-align: center;
-      margin-top: 2px;
-      max-width: 260px;
+      animation: custom-loading 1.1s cubic-bezier(0.65,0,0.35,1) infinite;
     }
     @keyframes custom-loading {
       0% { left: -40%; }
       100% { left: 120%; }
-    }
-    @keyframes custom-float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-4px); }
     }
   </style>
   
@@ -147,20 +120,15 @@
   <link rel="stylesheet" href="alas-motion.css">
   
   
+  
   <link rel="stylesheet" href="styles.a91ff4ab.min.css">
 </head>
 
 <body>
   <div id="loader">
     <div class="custom-loader-box">
-      <div class="custom-loader-icon">
-        <svg fill="none" stroke="white" stroke-width="1.8" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V10l7 4V10l7 4v7M9 21v-3m6 3v-3"/>
-        </svg>
-      </div>
+      <img src="assets/logo_alas_blanco.png" alt="ALAS" class="custom-loader-logo">
       <div class="custom-loader-line"></div>
-      <div class="custom-loader-text" id="loaderTitle">Iniciando sistema</div>
-      <div class="custom-loader-detail" id="loaderDetail"></div>
     </div>
   </div>
 
@@ -783,7 +751,9 @@
   
   
   
+  
+  
   <script src="supabase-lib.f4d1b5b7.min.js" defer></script>
-  <script src="app.e83de6a4.min.js" defer></script>
+  <script src="app.b20a7850.min.js" defer></script>
 </body>
 </html>
