@@ -14,9 +14,7 @@ const JS_FILES = [
   'src/app-notifs.js',
   'src/app-users.js',
   'src/app-mobile.js',
-  // 'src/alas-auth-client.js',  // fuera del bundle: el Calendario usa su propio
-  //                             // padron y no depende del Launcher. Ver el encabezado
-  //                             // del archivo para reactivarlo.
+  'src/alas-auth-client.js',
   'src/app-boot.js',
   'src/supabase-db.js'
 ].map(f => path.join(ROOT, f)).filter(f => fs.existsSync(f));

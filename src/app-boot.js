@@ -63,17 +63,10 @@ async function bootstrap() {
     console.warn('Error loading users on boot:', e);
   }
 
-  // El Calendario es autonomo: la identidad sale de SU padron (tabla usuarios), no
-  // del Launcher. No se usa SSO — el Launcher tiene otros ids (UUID de auth) y las
-  // tareas referencian los locales (usr_xxxx), asi que depender de el obligaba a
-  // machear por nombre y rompia la visibilidad cuando no coincidian.
-  // El Launcher igual agrega ?alas_token=... al abrir el modulo: se limpia para no
-  // dejarlo en la barra de direcciones ni en el historial.
-  const bootParams = new URLSearchParams(window.location.search);
-  if (bootParams.has('alas_token')) {
-    bootParams.delete('alas_token');
-    const cleanSearch = bootParams.toString() ? '?' + bootParams.toString() : '';
-    window.history.replaceState({}, '', window.location.pathname + cleanSearch);
+  // SSO opcional: si viene con token del Launcher, entra directo y se saltea el
+  // login. Si no, NO se rebota: el modulo es de acceso abierto por enlace directo.
+  if (typeof initSSO === 'function') {
+    await initSSO();
   }
 
   if (App.currentUser) {
