@@ -1,6 +1,14 @@
 // ============================================================
 //  alas-auth-client.js — SSO client para Calendario Tareas
 //
+//  *** NO SE INCLUYE EN EL BUNDLE (ver scripts/build.js) ***
+//  El Calendario es autonomo: la identidad sale de su propia tabla `usuarios` y el
+//  acceso es abierto (sin PIN), asi que el SSO solo ahorraba un click a cambio de
+//  depender del Launcher: sus ids son UUID de auth y las tareas referencian los
+//  locales (usr_xxxx), por lo que habia que machear por nombre y la visibilidad se
+//  rompia si no coincidian. Se conserva como referencia; para reactivarlo, volver a
+//  listarlo en build.js y llamar a initSSO() desde bootstrap().
+//
 //  Verifica el alas_token firmado emitido por el Launcher ALAS.
 //  Si el token es válido, construye App.currentUser y salta el
 //  login PIN. Si no hay token ni sesión SSO, deja que el login

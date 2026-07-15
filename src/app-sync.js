@@ -483,20 +483,16 @@ async function loadUsers(silent = false) {
     initLogin();
 
     if (App.currentUser) {
-      // Usuarios SSO (del Launcher) no existen en esta BD — no expulsar
-      if (App.ssoAuthenticated) {
+      // Ya no hay usuarios SSO ajenos al padron: todos salen de esta misma tabla,
+      // asi que si el usuario activo desaparecio o quedo inactivo, se lo expulsa.
+      const fresh = activeUsers().find(user => user.id === App.currentUser.id);
+      if (!fresh) {
+        confirmLogout(true);
+        toast('Tu sesion ya no esta disponible');
+      } else {
+        App.currentUser = fresh;
         updateSidebarUser();
         if (App.view === 'usr') renderUsers();
-      } else {
-        const fresh = activeUsers().find(user => user.id === App.currentUser.id);
-        if (!fresh) {
-          confirmLogout(true);
-          toast('Tu sesion ya no esta disponible');
-        } else {
-          App.currentUser = fresh;
-          updateSidebarUser();
-          if (App.view === 'usr') renderUsers();
-        }
       }
     } else {
       restoreSession();
