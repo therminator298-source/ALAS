@@ -79,15 +79,13 @@ BEGIN
     RETURN json_build_object('status', 'error', 'message', 'Usuario no encontrado o inactivo');
   END IF;
 
-  -- Falla cerrado: con pin_hash NULL, "hash != NULL" daba NULL (no TRUE), el IF no
-  -- entraba y el admin entraba con CUALQUIER PIN. IS DISTINCT FROM trata el NULL
-  -- como distinto, y el chequeo explicito de NULL bloquea a los admins sin PIN.
-  IF v_user.rol = 'admin' THEN
-    IF v_user.pin_hash IS NULL OR p_pin = ''
-       OR encode(digest(p_pin, 'sha256'), 'hex') IS DISTINCT FROM v_user.pin_hash THEN
-      RETURN json_build_object('status', 'error', 'message', 'PIN incorrecto');
-    END IF;
-  END IF;
+  -- Modulo ABIERTO por decision del negocio: no se pide PIN a nadie, tampoco a los
+  -- admin. El rol sale del usuario elegido en la lista. p_pin se ignora y se conserva
+  -- el parametro por compatibilidad con el cliente.
+  -- Implicancia asumida: cualquiera puede elegir un admin de la lista y entrar como
+  -- tal. Si algun dia se quiere volver a exigir PIN, hay que comparar con
+  -- IS DISTINCT FROM y rechazar pin_hash NULL: con "!=" un pin_hash NULL da NULL
+  -- (no TRUE) y deja pasar cualquier PIN.
 
   INSERT INTO sesiones ("userId", token) VALUES (v_user.id, gen_random_uuid()::text)
   RETURNING token INTO v_token;

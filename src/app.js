@@ -549,6 +549,17 @@ async function persistEnProcesoOrder(ids) {
 
 function activeUsers()        { return users.filter(u => u.activo); }
 function findUser(id)         { return users.find(u => u.id === id) || null; }
+// Visibilidad por persona: el admin ve todo; el operativo ve "lo suyo" = las tareas
+// asignadas a el mas las que creo. Ojo con los campos: `asig` guarda el ID del
+// usuario, pero `creadoPor` guarda el NOMBRE (asi las graba la app), por eso se
+// comparan contra claves distintas.
+// Es un filtro de VISTA, no una barrera de seguridad: la anon key es publica y la
+// policy es anon_all, asi que los datos siguen siendo legibles desde la API.
+function visibleTasksFor(tasks, user) {
+  if (!Array.isArray(tasks)) return [];
+  if (!user || user.rol === 'admin') return tasks;
+  return tasks.filter(t => t.asig === user.id || (!!t.creadoPor && t.creadoPor === user.nm));
+}
 function findActivityType(id) { return ACTIVITY_TYPES.find(t => t.id === id) || { nm: id, c: '#64748B', i: '?' }; }
 function buildApiUrl(resource, extraParams = null) {
   const params = new URLSearchParams();
@@ -1178,16 +1189,11 @@ function selectLoginUser(id, opts = {}) {
   const pinContainer = document.getElementById('loginPinContainer');
   const pinInput     = document.getElementById('loginPin');
 
-  if (user.rol === 'admin') {
-    if (pinContainer) pinContainer.style.display = 'block';
-    if (pinInput && !keepPin) pinInput.value = '';
-    if (!keepStatus) setLoginPinStatus('neutral', 'Ingresa tu PIN de administrador');
-    if (focusPin) pinInput?.focus();
-  } else {
-    if (pinContainer) pinContainer.style.display = 'none';
-    if (pinInput) pinInput.value = '';
-    setLoginPinStatus('idle', '');
-  }
+  // Modulo abierto: nadie ingresa PIN, tampoco los admin. El campo queda oculto
+  // siempre; el rol se toma del usuario elegido en la lista.
+  if (pinContainer) pinContainer.style.display = 'none';
+  if (pinInput) pinInput.value = '';
+  setLoginPinStatus('idle', '');
   showLoginError('');
 }
 
@@ -1202,19 +1208,11 @@ async function doLogin() {
   if (App.loginBusy) return;
   if (!selectedLoginUserId) { showLoginError('Selecciona un usuario'); return; }
 
-  const pin          = document.getElementById('loginPin')?.value.trim() || '';
-  const selectedUser = currentLoginUser();
-
-  if (selectedUser && selectedUser.rol === 'admin' && !pin) {
-    setLoginPinStatus('error', 'Ingresa tu PIN');
-    showLoginError('');
-    return;
-  }
+  const pin = '';
 
   let loginOk = false;
   try {
     setLoginBusy(true);
-    if (selectedUser && selectedUser.rol === 'admin') setLoginPinStatus('loading', 'Verificando PIN...');
     const response = await postAction({ action: 'login', id: selectedLoginUserId, pin });
     const user = normalizeUserRecord(response.user);
     const token = String(response.token || '').trim();
@@ -1222,7 +1220,6 @@ async function doLogin() {
     if (!token) throw new Error('No se recibi\u00f3 un token de sesi\u00f3n v\u00e1lido');
     persistSession(user.id, token);
     showLoginError('');
-    if (user.rol === 'admin') setLoginPinStatus('ok', 'PIN correcto');
     loginOk = true;
     await new Promise(r => setTimeout(r, 200));
     setLoggedInUser(user, token);
@@ -1241,13 +1238,7 @@ async function doLogin() {
     }
   } catch (e) {
     hideLoaderOverlay();
-    const msg = e.message || 'No se pudo iniciar sesi\u00f3n';
-    if (selectedUser && selectedUser.rol === 'admin') {
-      setLoginPinStatus('error', /pin/i.test(msg) ? 'PIN incorrecto' : 'No se pudo validar el PIN');
-      showLoginError('');
-    } else {
-      showLoginError(msg);
-    }
+    showLoginError(e.message || 'No se pudo iniciar sesi\u00f3n');
   } finally {
     if (!loginOk) setLoginBusy(false);
   }

@@ -548,7 +548,6 @@ async function loadTaskData(silent = false, force = false) {
 
     if (isSupabaseReady()) {
       parsed = await window.SUPABASE.loadTasks();
-      parsedSignature = buildTaskListSignature(parsed);
     } else {
       const data = await cachedFetch('tareas', CACHE_KEYS.tasks, force ? 0 : 300000, {
         forceFresh: force,
@@ -558,8 +557,11 @@ async function loadTaskData(silent = false, force = false) {
       if (force && (isSyncing || Date.now() - syncDoneAt < SYNC_COOLDOWN)) return;
 
       parsed = Array.isArray(data) ? data.map(normalizeTaskRecord).filter(Boolean) : [];
-      parsedSignature = buildTaskListSignature(parsed);
     }
+    // Unico punto donde se recorta la visibilidad: el resto de las vistas (calendario,
+    // contadores, buscador, movil) parten de App.tasks y heredan el filtro solo.
+    parsed = visibleTasksFor(parsed, App.currentUser);
+    parsedSignature = buildTaskListSignature(parsed);
     const shouldAutoFocusDay = !App.selectedDay || (
       App.selectedDay === todayKey() &&
       !parsed.some(t => t.dep === App.department && t.fecha === App.selectedDay)
