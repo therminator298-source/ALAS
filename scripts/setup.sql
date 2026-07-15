@@ -79,8 +79,12 @@ BEGIN
     RETURN json_build_object('status', 'error', 'message', 'Usuario no encontrado o inactivo');
   END IF;
 
+  -- Falla cerrado: con pin_hash NULL, "hash != NULL" daba NULL (no TRUE), el IF no
+  -- entraba y el admin entraba con CUALQUIER PIN. IS DISTINCT FROM trata el NULL
+  -- como distinto, y el chequeo explicito de NULL bloquea a los admins sin PIN.
   IF v_user.rol = 'admin' THEN
-    IF p_pin = '' OR encode(digest(p_pin, 'sha256'), 'hex') != v_user.pin_hash THEN
+    IF v_user.pin_hash IS NULL OR p_pin = ''
+       OR encode(digest(p_pin, 'sha256'), 'hex') IS DISTINCT FROM v_user.pin_hash THEN
       RETURN json_build_object('status', 'error', 'message', 'PIN incorrecto');
     END IF;
   END IF;

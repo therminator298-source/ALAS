@@ -91,8 +91,18 @@ async function migrate() {
   await upsertBatched('tareas', tareas);
   console.log(`   ${tareas.length} tareas migradas`);
 
+  // El recurso "demoras" del Apps Script exige _uid/_token de una sesion viva y se
+  // pide por taskId, asi que no es migrable sin login. Es historial secundario: se
+  // avisa y se sigue en vez de tumbar una migracion que ya cargo usuarios y tareas.
   console.log('3. Demoras...');
-  const gasDelays = await fetchFromGAS('demoras');
+  let gasDelays;
+  try {
+    gasDelays = await fetchFromGAS('demoras');
+  } catch (e) {
+    console.log(`   Omitidas: ${e.message} (el historial de demoras requiere sesion)`);
+    console.log('\nMigracion completada (sin demoras). Verifica en el Table Editor de Supabase.');
+    return;
+  }
   // Solo las demoras cuya tarea existe: "taskId" tiene FK contra tareas(id).
   const taskIds = new Set(tareas.map(t => t.id));
   const demoras = gasDelays.map(d => ({
