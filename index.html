@@ -17,18 +17,19 @@
   
 
   <style>
+    /* Loader de entrada: mismo patron y paleta que Inventario (logo + barra sobre
+       #EEF2F7). El claro ademas encadena con el login, cuyo fondo pasa por ese
+       mismo tono: con el loader oscuro se veia un flash negro -> claro. */
     #loader {
       position: fixed;
       inset: 0;
-      background: #0b1120 !important;
+      background: #EEF2F7 !important;
       display: flex !important;
       align-items: center;
       justify-content: center;
       z-index: 99999;
       transition: opacity 0.4s ease;
     }
-    /* Loader de entrada: mismo patron minimalista que Inventario (logo + barra),
-       sobre el fondo oscuro propio del Calendario. */
     .custom-loader-box {
       display: flex;
       flex-direction: column;
@@ -42,7 +43,7 @@
     .custom-loader-line {
       width: 150px;
       height: 4px;
-      background: rgba(255,255,255,0.10);
+      background: #E2E8F0;
       border-radius: 999px;
       overflow: hidden;
       position: relative;
@@ -53,7 +54,7 @@
       left: -40%;
       width: 40%;
       height: 100%;
-      background: #60a5fa;
+      background: #0B5F8D;
       border-radius: 999px;
       animation: custom-loading 1.1s cubic-bezier(0.65,0,0.35,1) infinite;
     }
@@ -121,13 +122,14 @@
   
   
   
+  
   <link rel="stylesheet" href="styles.a91ff4ab.min.css">
 </head>
 
 <body>
   <div id="loader">
     <div class="custom-loader-box">
-      <img src="assets/logo_alas_blanco.png" alt="ALAS" class="custom-loader-logo">
+      <img src="assets/logo-alas-s.a.png" alt="ALAS" class="custom-loader-logo">
       <div class="custom-loader-line"></div>
     </div>
   </div>
@@ -710,6 +712,8 @@
   <script src="sso-config.js"></script>
   <script src="ui-protection.js" defer></script>
 
+  
+  
   
   
   
