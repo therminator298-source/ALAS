@@ -79,12 +79,38 @@ function sso_buildUser(payload) {
   };
 }
 
+// El Launcher y el Calendario tienen padrones DISTINTOS: el token trae el UUID de
+// auth del Launcher, mientras que las tareas referencian los ids propios del modulo
+// (usr_xxxx / admin1). Si se entra con el id del token, `asig` no matchea con nada
+// y el operativo ve un calendario vacio. Por eso se busca al usuario en el padron
+// local por nombre; `users` ya esta cargado porque loadUsers() corre antes que
+// initSSO() en bootstrap().
+function sso_findLocalUser(payload) {
+  const nm = String(payload.name || payload.email || '').trim().toLowerCase();
+  if (!nm || typeof users === 'undefined' || !Array.isArray(users)) return null;
+  return users.find(u => u.activo && String(u.nm || '').trim().toLowerCase() === nm) || null;
+}
+
+// Devuelve true si dejo la sesion aplicada; false si hay que caer al selector.
 function sso_apply(payload) {
-  const user = sso_buildUser(payload);
+  const local = sso_findLocalUser(payload);
+
+  // Sin match en el padron local y sin rol admin no se puede resolver "lo suyo":
+  // el filtro por asig/creadoPor no encontraria nada y entraria a un calendario
+  // vacio sin explicacion. Es preferible pedirle que elija su identidad.
+  if (!local && normalizeRole(payload.role) !== 'admin') {
+    console.warn('[ALAS SSO] "' + (payload.name || payload.email) + '" no existe en el padron del Calendario. Se pide elegir identidad.');
+    return false;
+  }
+
+  // El admin sin match si puede entrar sintetico: ve todo, no depende de los ids.
+  const user = local || sso_buildUser(payload);
   // Marcar como SSO para que loadUsers() no lo expulse
   App.ssoAuthenticated = true;
   setLoggedInUser(user, 'sso-launcher');
-  console.info('[ALAS SSO] Sesión aplicada. Usuario:', user.nm, '| Rol:', user.rol);
+  console.info('[ALAS SSO] Sesión aplicada. Usuario:', user.nm, '| Rol:', user.rol,
+    local ? '(padron local)' : '(sintetico, sin match local)');
+  return true;
 }
 
 /* ── initSSO ────────────────────────────────────────────────────────────── */
@@ -106,9 +132,13 @@ async function initSSO() {
 
     const payload = await sso_verifyToken(decodeURIComponent(rawToken));
     if (payload) {
-      sso_save(payload);
-      sso_apply(payload);
-      return true;
+      // Solo se cachea la sesión si pudo aplicarse; si no, la próxima visita
+      // volvería a entrar con una identidad que no resuelve sus tareas.
+      if (sso_apply(payload)) {
+        sso_save(payload);
+        return true;
+      }
+      return false;
     }
     console.warn('[ALAS SSO] Token del URL inválido. Verificando sesión guardada...');
   }
@@ -116,8 +146,7 @@ async function initSSO() {
   // ── 2. Sesión guardada ──
   const stored = sso_load();
   if (stored) {
-    sso_apply(stored);
-    return true;
+    if (sso_apply(stored)) return true;
   }
 
   // ── 3. Sin SSO — continúa con login PIN normal ──
