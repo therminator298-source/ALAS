@@ -135,12 +135,24 @@ BEGIN
 END;
 $$;
 
--- 7. DESHABILITAR RLS (Row-Level Security) para que la app pueda leer/escribir
---    La app maneja su propio sistema de autenticación con PIN, no usa auth de Supabase
-ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
-ALTER TABLE tareas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE demoras DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sesiones DISABLE ROW LEVEL SECURITY;
+-- 7. RLS: politica permisiva para anon (la app maneja su propio login con PIN,
+--    no usa el auth de Supabase). Se usan POLICIES en vez de DISABLE ROW LEVEL
+--    SECURITY porque Supabase vuelve a habilitar RLS en las tablas nuevas del
+--    schema public y el DISABLE no sobrevive. Mismo patron que Inventario.
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tareas   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE demoras  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sesiones ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['usuarios','tareas','demoras','sesiones']
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS anon_all ON %I;', t);
+    EXECUTE format('CREATE POLICY anon_all ON %I FOR ALL TO anon USING (true) WITH CHECK (true);', t);
+  END LOOP;
+END $$;
 
 -- 8. ÍNDICES
 CREATE INDEX IF NOT EXISTS idx_tareas_fecha ON tareas(fecha);
