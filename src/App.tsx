@@ -4,6 +4,7 @@ import { Dashboard } from '@/pages/Dashboard';
 import { Placeholder } from '@/pages/Placeholder';
 import { IncidentsView } from '@/features/incidents/IncidentsView';
 import { NewIncident } from '@/features/incidents/NewIncident';
+import { IncidentDetail } from '@/features/incidents/IncidentDetail';
 
 export default function App() {
   return (
@@ -20,7 +21,7 @@ export default function App() {
           <Route path="/incidents/verified" element={<IncidentsView title="Verificadas" fixedStatus="VERIFICADO" />} />
           <Route path="/incidents/resolution" element={<IncidentsView title="En resolución" fixedStatus="EN_RESOLUCION" />} />
           <Route path="/incidents/completed" element={<IncidentsView title="Terminadas" fixedStatus="TERMINADO" />} />
-          <Route path="/incidents/:id" element={<Placeholder title="Detalle de incidencia" phase="Fase 6 (Drawer)" />} />
+          <Route path="/incidents/:id" element={<IncidentDetail />} />
 
           <Route path="/reports" element={<Placeholder title="Reportes" phase="Fase 9" />} />
           <Route path="/suppliers" element={<Placeholder title="Proveedores" phase="Fase 9" />} />
