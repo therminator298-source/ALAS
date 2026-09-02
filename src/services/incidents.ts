@@ -19,7 +19,13 @@ export interface ListResult {
 }
 
 const SELECT =
-  'id,incident_number,document_number,invoice_number,supplier_id,warehouse_id,reason,status,priority,description,created_by,assigned_to,emission_date,created_at,updated_at,verified_at,resolved_at,closed_at,deleted_at';
+  'id,incident_number,document_number,invoice_number,supplier_id,warehouse_id,reason,status,priority,description,created_by,assigned_to,emission_date,created_at,updated_at,verified_at,resolved_at,closed_at,deleted_at,supplier:suppliers(nombre)';
+
+/** Aplana los embeds de Supabase a las props que usa la UI. */
+function mapRow(r: Record<string, unknown>): Incident {
+  const supplier = r.supplier as { nombre?: string } | null;
+  return { ...(r as unknown as Incident), supplier_nombre: supplier?.nombre ?? null };
+}
 
 function applyMockFilters(rows: Incident[], f: IncidentFilters): Incident[] {
   const statuses = f.status ? (Array.isArray(f.status) ? f.status : [f.status]) : null;
@@ -77,7 +83,7 @@ export async function listIncidents(
 
       const { data, error, count } = await query;
       if (error) throw error;
-      return { rows: (data as Incident[]) ?? [], total: count ?? 0, live: true };
+      return { rows: (data ?? []).map((r) => mapRow(r as Record<string, unknown>)), total: count ?? 0, live: true };
     } catch (err) {
       console.warn('[incidents] Supabase no disponible, usando mock:', (err as Error).message);
     }
@@ -86,4 +92,43 @@ export async function listIncidents(
   const filtered = applyMockFilters(MOCK_INCIDENTS, filters);
   const start = (page - 1) * pageSize;
   return { rows: filtered.slice(start, start + pageSize), total: filtered.length, live: false };
+}
+
+export interface NewIncidentItem {
+  product_id?: string | null;
+  codigo: string;
+  descripcion: string;
+  expected_qty?: number;
+  received_qty?: number;
+  affected_qty?: number;
+  difference_qty?: number;
+  unit?: string;
+  lot?: string | null;
+  observation?: string | null;
+}
+
+export interface NewIncidentPayload {
+  document_number?: string | null;
+  invoice_number?: string | null;
+  supplier_id?: string | null;
+  warehouse_id?: string | null;
+  reason: IncidentReason;
+  priority?: string;
+  description?: string | null;
+  emission_date?: string;
+  status?: 'PENDIENTE' | 'BORRADOR';
+  items: NewIncidentItem[];
+}
+
+/** Crea una incidencia vía RPC atómica (valida permiso + historial + auditoría). */
+export async function createIncident(actorId: string, payload: NewIncidentPayload): Promise<Incident> {
+  if (!supabase) {
+    throw new Error('Sin conexión a Supabase. Configurá .env.local y corré db/schema.sql.');
+  }
+  const { data, error } = await supabase.rpc('create_incident', {
+    p_actor: actorId,
+    p_payload: payload,
+  });
+  if (error) throw new Error(error.message);
+  return data as Incident;
 }

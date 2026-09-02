@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { CommandPalette } from '@/components/CommandPalette';
+import { ToastHost } from '@/components/ui/toast';
 import { useSession } from '@/store/session';
 
 const COLLAPSE_KEY = 'inc.sidebar.collapsed';
@@ -72,6 +73,7 @@ export function AppShell() {
         </main>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <ToastHost />
     </div>
   );
 }
