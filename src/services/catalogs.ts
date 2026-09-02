@@ -28,7 +28,7 @@ export async function listSuppliers(): Promise<Supplier[]> {
         .eq('activo', true)
         .order('nombre');
       if (error) throw error;
-      if (data?.length) return data as Supplier[];
+      return data as Supplier[]; // datos reales (aunque esté vacío: correr seed_demo.sql)
     } catch (e) {
       console.warn('[catalogs] suppliers fallback mock:', (e as Error).message);
     }
@@ -45,7 +45,7 @@ export async function listWarehouses(): Promise<Warehouse[]> {
         .eq('activo', true)
         .order('nombre');
       if (error) throw error;
-      if (data?.length) return data as Warehouse[];
+      return data as Warehouse[];
     } catch (e) {
       console.warn('[catalogs] warehouses fallback mock:', (e as Error).message);
     }
