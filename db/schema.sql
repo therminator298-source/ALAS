@@ -428,7 +428,7 @@ as $$
 declare v_inc incidents; v_from text;
 begin
   if not user_has_permission(p_actor, p_perm) then
-    raise exception 'Sin permiso (%%) para esta acción', p_perm using errcode = '42501';
+    raise exception 'Sin permiso (%) para esta acción', p_perm using errcode = '42501';
   end if;
 
   select * into v_inc from incidents where id = p_incident for update;
