@@ -1,17 +1,9 @@
 import { NavLink } from 'react-router-dom';
 import {
-  CheckCircle,
   ClipboardList,
-  Clock,
-  FileBarChart,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
-  Package,
-  Plus,
-  Settings,
-  ShieldCheck,
-  Truck,
   UserCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -25,7 +17,6 @@ interface SidebarItem {
   to: string;
   icon: LucideIcon;
   end?: boolean;
-  badgeKey?: 'pendientes' | 'revision' | 'verificados';
 }
 
 interface SidebarProps {
@@ -33,46 +24,27 @@ interface SidebarProps {
   sessionSource: SessionSource;
   onLogout: () => void;
   onReturnToLauncher: () => void;
-  badges?: Partial<Record<'pendientes' | 'revision' | 'verificados', number>>;
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { label: 'Dashboard Resumen', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Nueva incidencia', to: '/incidents/new', icon: Plus },
-  { label: 'Todas las incidencias', to: '/incidents', icon: ClipboardList, end: true },
-  { label: 'Pendientes', to: '/incidents/pending', icon: Clock, badgeKey: 'pendientes' },
-  { label: 'En revision', to: '/incidents/review', icon: ClipboardList, badgeKey: 'revision' },
-  { label: 'Verificadas', to: '/incidents/verified', icon: CheckCircle, badgeKey: 'verificados' },
-  { label: 'Reportes', to: '/reports', icon: FileBarChart },
-  { label: 'Proveedores', to: '/suppliers', icon: Truck },
-  { label: 'Productos', to: '/products', icon: Package },
-  { label: 'Auditoria', to: '/audit', icon: ShieldCheck },
-  { label: 'Configuracion', to: '/settings', icon: Settings },
+  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
+  { label: 'Incidencias', to: '/incidents', icon: ClipboardList, end: true },
 ];
-
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const initials = parts.length > 1 ? `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}` : name.slice(0, 2);
-  return initials.toUpperCase();
-}
 
 function sourceLabel(source: SessionSource): string {
   return source === 'launcher' ? 'Launcher ALAS' : 'Modo demo';
 }
 
-export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher, badges = {} }: SidebarProps) {
+export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher }: SidebarProps) {
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
         <NavLink to="/dashboard" className="sidebar-brand" aria-label="Ir al dashboard">
-          <img src="/icon-192.png" alt="" className="sidebar-brand__icon" />
           <img src="/logo-alas-blanco.png" alt="ALAS" className="sidebar-brand__wordmark" />
         </NavLink>
 
         {SIDEBAR_ITEMS.map((item) => {
           const Icon = item.icon;
-          const count = item.badgeKey ? badges[item.badgeKey] : undefined;
-
           return (
             <NavLink
               key={item.to}
@@ -84,7 +56,6 @@ export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher, bad
             >
               <Icon aria-hidden="true" />
               <span className="tooltip">{item.label}</span>
-              {typeof count === 'number' && count > 0 && <span className="sidebar-badge">{count}</span>}
             </NavLink>
           );
         })}
@@ -108,16 +79,6 @@ export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher, bad
           <LogOut aria-hidden="true" />
           <span className="tooltip">Cerrar sesion</span>
         </button>
-
-        <div className="sidebar-brand" aria-label="Usuario activo">
-          <span className="sidebar-brand__icon grid place-items-center bg-white text-[11px] font-black text-brand">
-            {initialsFor(user.nombre)}
-          </span>
-          <span className="sidebar-user-label">
-            <span>{user.nombre}</span>
-            <small>{sourceLabel(sessionSource)}</small>
-          </span>
-        </div>
       </div>
     </nav>
   );
