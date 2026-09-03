@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { X } from 'lucide-react';
@@ -11,27 +11,40 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
-  /** Si false, no cierra por clic-afuera ni ESC (solo por botón). */
   dismissable?: boolean;
+  eyebrow?: string;
+  subtitle?: string;
 }
 
-const SIZES = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' };
+const SIZES = { sm: 'alas-modal--sm', md: 'alas-modal--md', lg: 'alas-modal--lg' };
 
-export function Modal({ open, onClose, title, children, footer, size = 'md', dismissable = true }: ModalProps) {
-  const boxRef = useRef<HTMLDivElement>(null);
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
+  dismissable = true,
+  eyebrow,
+  subtitle,
+}: ModalProps) {
+  const titleId = useId();
+  const boxRef = useRef<HTMLElement>(null);
   const bdRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (!reduce && boxRef.current && bdRef.current) {
-      gsap.fromTo(bdRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power2.out' });
+      gsap.fromTo(bdRef.current, { opacity: 0 }, { opacity: 1, duration: 0.32, ease: 'power2.out' });
       gsap.fromTo(
         boxRef.current,
-        { opacity: 0, y: 8, scale: 0.97 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out', clearProps: 'transform' },
+        { opacity: 0, y: 24, scale: 0.94 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.38, ease: 'power3.out', clearProps: 'transform,opacity' },
       );
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && dismissable) onClose();
     };
@@ -42,45 +55,33 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', dis
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal aria-label={title}>
-      <div
-        ref={bdRef}
-        className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
-        onClick={dismissable ? onClose : undefined}
-      />
-      <div
+    <div
+      ref={bdRef}
+      className="alas-modal-backdrop"
+      role="presentation"
+      onClick={dismissable ? onClose : undefined}
+    >
+      <section
         ref={boxRef}
-        className={cn(
-          'relative flex w-full max-h-[90vh] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-pop',
-          SIZES[size],
-        )}
+        className={cn('alas-modal', SIZES[size])}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="h-1.5 shrink-0 bg-brand" />
-        <div className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft">
-              <img src="/icon-192.png" alt="ALAS" className="h-7 w-7 rounded-md object-contain" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-extrabold uppercase tracking-wide text-brand">ALAS</p>
-              <h2 className="truncate text-base font-extrabold text-ink">{title}</h2>
-            </div>
+        <div className="alas-modal__header">
+          <div className="min-w-0">
+            {eyebrow && <p className="alas-modal__eyebrow">{eyebrow}</p>}
+            <h2 id={titleId} className="alas-modal__title">{title}</h2>
+            {subtitle && <p className="alas-modal__subtitle">{subtitle}</p>}
           </div>
-          <button
-            onClick={onClose}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
-            aria-label="Cerrar"
-          >
+          <button type="button" onClick={onClose} className="alas-modal__close" aria-label="Cerrar">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-5 overflow-y-auto">{children}</div>
-        {footer && (
-          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-border bg-surface-2 shrink-0">
-            {footer}
-          </div>
-        )}
-      </div>
+        <div className="alas-modal__body">{children}</div>
+        {footer && <div className="alas-modal__footer">{footer}</div>}
+      </section>
     </div>,
     document.body,
   );

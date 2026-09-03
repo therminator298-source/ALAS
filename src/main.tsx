@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { SessionProvider } from '@/store/session';
 import './index.css';
+import './styles/modelShell.css';
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('No se encontró el elemento #root');
