@@ -22,15 +22,17 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
       )}
     >
       {/* Brand */}
-      <div className="flex items-center gap-3 h-16 px-4 border-b border-border">
-        <div className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-brand text-white font-extrabold">
-          A
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <div className="text-sm font-extrabold leading-tight text-ink">Incidencias</div>
-            <div className="text-2xs font-semibold uppercase tracking-wide text-ink-3">Recepción</div>
-          </div>
+      <div className="flex items-center gap-2 h-16 px-4 border-b border-border">
+        {collapsed ? (
+          <img src="/icon-192.png" alt="ALAS" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
+        ) : (
+          <>
+            <img src="/logo-alas.png" alt="ALAS" className="h-7 w-auto shrink-0 dark:hidden" />
+            <img src="/logo-alas-blanco.png" alt="ALAS" className="h-7 w-auto shrink-0 hidden dark:block" />
+            <span className="ml-1 pl-2 border-l border-border text-2xs font-bold uppercase tracking-wide text-ink-3 leading-tight">
+              Incidencias<br />Recepción
+            </span>
+          </>
         )}
       </div>
 
