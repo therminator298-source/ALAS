@@ -1,41 +1,64 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { ChevronDown, ChevronLeft, LayoutGrid, LogOut, UserCircle } from 'lucide-react';
+import { ROLE_LABELS } from '@/config/constants';
 import { NAV } from '@/config/nav';
+import type { SessionSource } from '@/lib/alasSso';
 import { cn } from '@/lib/utils';
+import type { User } from '@/types';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  user: User;
+  sessionSource: SessionSource;
+  onLogout: () => void;
+  onReturnToLauncher: () => void;
   badges?: Partial<Record<'pendientes' | 'revision' | 'verificados', number>>;
 }
 
-export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts.length > 1 ? `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}` : name.slice(0, 2);
+  return initials.toUpperCase();
+}
+
+function sourceLabel(source: SessionSource): string {
+  return source === 'launcher' ? 'Launcher ALAS' : 'Modo demo';
+}
+
+export function Sidebar({
+  collapsed,
+  onToggle,
+  user,
+  sessionSource,
+  onLogout,
+  onReturnToLauncher,
+  badges = {},
+}: SidebarProps) {
   const location = useLocation();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Incidencias: true });
 
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col shrink-0 border-r border-border bg-surface transition-[width] duration-300 ease-smooth',
-        collapsed ? 'w-16' : 'w-64',
+        'hidden md:flex flex-col shrink-0 bg-brand text-white shadow-pop transition-[width] duration-300 ease-smooth',
+        collapsed ? 'w-16' : 'w-72',
       )}
     >
-      {/* Brand */}
-      <div className="flex items-center gap-3 h-16 px-4 border-b border-border">
-        <div className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-brand text-white font-extrabold">
-          A
-        </div>
+      <div className="flex h-16 items-center gap-3 border-b border-white/15 px-4">
+        <img src="/icon-192.png" alt="ALAS" className="h-10 w-10 shrink-0 rounded-xl object-contain" />
         {!collapsed && (
           <div className="min-w-0">
-            <div className="text-sm font-extrabold leading-tight text-ink">Incidencias</div>
-            <div className="text-2xs font-semibold uppercase tracking-wide text-ink-3">Recepción</div>
+            <img src="/logo-alas-blanco.png" alt="ALAS" className="h-7 w-auto" />
+            <p className="mt-0.5 text-[11px] font-bold uppercase leading-tight tracking-wide text-white/70">
+              Calendario tareas
+            </p>
           </div>
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto p-2.5 space-y-1">
         {NAV.map((item) => {
           const Icon = item.icon;
           const isGroup = !!item.children?.length;
@@ -52,10 +75,11 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
                 title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'group flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-semibold transition-colors',
+                    'group flex h-10 items-center gap-3 rounded-lg text-sm font-semibold transition-colors',
+                    collapsed ? 'justify-center px-0' : 'px-3',
                     isActive
-                      ? 'bg-brand-soft text-brand'
-                      : 'text-ink-2 hover:bg-surface-3 hover:text-ink',
+                      ? 'bg-white text-brand shadow-sm'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white',
                   )
                 }
               >
@@ -75,22 +99,23 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
                 }
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  'w-full flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-semibold transition-colors',
-                  active ? 'text-brand' : 'text-ink-2 hover:bg-surface-3 hover:text-ink',
+                  'flex h-10 w-full items-center gap-3 rounded-lg text-sm font-semibold transition-colors',
+                  collapsed ? 'justify-center px-0' : 'px-3',
+                  active ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white',
                 )}
               >
                 <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                 {!collapsed && (
                   <>
-                    <span className="truncate flex-1 text-left">{item.label}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
                     <ChevronDown
-                      className={cn('h-4 w-4 transition-transform', groupOpen && 'rotate-180')}
+                      className={cn('h-4 w-4 shrink-0 transition-transform', groupOpen && 'rotate-180')}
                     />
                   </>
                 )}
               </button>
               {!collapsed && groupOpen && (
-                <div className="mt-0.5 ml-4 pl-3 border-l border-border space-y-0.5">
+                <div className="mt-1 ml-4 space-y-0.5 border-l border-white/20 pl-3">
                   {item.children!.map((child) => {
                     const count = child.badgeKey ? badges[child.badgeKey] : undefined;
                     return (
@@ -100,16 +125,16 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
                         end
                         className={({ isActive }) =>
                           cn(
-                            'flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-medium transition-colors',
+                            'flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors',
                             isActive
-                              ? 'bg-brand-soft text-brand font-semibold'
-                              : 'text-ink-2 hover:bg-surface-3 hover:text-ink',
+                              ? 'bg-white text-brand font-semibold shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white',
                           )
                         }
                       >
-                        <span className="truncate flex-1">{child.label}</span>
+                        <span className="min-w-0 flex-1 truncate">{child.label}</span>
                         {typeof count === 'number' && count > 0 && (
-                          <span className="shrink-0 min-w-[20px] h-5 px-1.5 grid place-items-center rounded-full bg-surface-3 text-2xs font-bold text-ink-2 tabular-nums">
+                          <span className="grid h-5 min-w-[20px] shrink-0 place-items-center rounded-full bg-white/15 px-1.5 text-2xs font-bold tabular-nums text-white">
                             {count}
                           </span>
                         )}
@@ -123,17 +148,63 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
         })}
       </nav>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-3 h-11 px-4 border-t border-border text-ink-3 hover:text-ink hover:bg-surface-3 transition-colors"
-        title={collapsed ? 'Expandir' : 'Colapsar'}
-      >
-        <ChevronLeft
-          className={cn('h-[18px] w-[18px] shrink-0 transition-transform', collapsed && 'rotate-180')}
-        />
-        {!collapsed && <span className="text-xs font-semibold">Colapsar</span>}
-      </button>
+      <div className="border-t border-white/15 p-2.5">
+        {!collapsed && (
+          <div className="mb-2 rounded-lg border border-white/15 bg-white/10 p-3">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-sm font-extrabold text-brand">
+                {initialsFor(user.nombre)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-extrabold text-white">{user.nombre}</p>
+                <p className="truncate text-2xs font-semibold text-white/60">{ROLE_LABELS[user.rol]}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-wide text-white/60">
+              <UserCircle className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{sourceLabel(sessionSource)}</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onReturnToLauncher}
+          className={cn(
+            'mb-1 flex h-10 w-full items-center gap-3 rounded-lg text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white',
+            collapsed ? 'justify-center px-0' : 'px-3',
+          )}
+          title="Volver al launcher"
+        >
+          <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && <span className="truncate">Launcher</span>}
+        </button>
+
+        <button
+          onClick={onLogout}
+          className={cn(
+            'mb-1 flex h-10 w-full items-center gap-3 rounded-lg text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white',
+            collapsed ? 'justify-center px-0' : 'px-3',
+          )}
+          title="Cerrar sesion"
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && <span className="truncate">Cerrar sesion</span>}
+        </button>
+
+        <button
+          onClick={onToggle}
+          className={cn(
+            'flex h-10 w-full items-center gap-3 rounded-lg text-sm font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white',
+            collapsed ? 'justify-center px-0' : 'px-3',
+          )}
+          title={collapsed ? 'Expandir' : 'Colapsar'}
+        >
+          <ChevronLeft
+            className={cn('h-[18px] w-[18px] shrink-0 transition-transform', collapsed && 'rotate-180')}
+          />
+          {!collapsed && <span className="truncate">Colapsar</span>}
+        </button>
+      </div>
     </aside>
   );
 }

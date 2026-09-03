@@ -45,13 +45,32 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', dis
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal aria-label={title}>
       <div
         ref={bdRef}
-        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
         onClick={dismissable ? onClose : undefined}
       />
-      <div ref={boxRef} className={cn('relative card shadow-pop w-full flex flex-col max-h-[90vh]', SIZES[size])}>
-        <div className="flex items-center justify-between gap-4 px-5 h-14 border-b border-border shrink-0">
-          <h2 className="text-base font-extrabold text-ink">{title}</h2>
-          <button onClick={onClose} className="text-ink-3 hover:text-ink transition-colors" aria-label="Cerrar">
+      <div
+        ref={boxRef}
+        className={cn(
+          'relative flex w-full max-h-[90vh] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-pop',
+          SIZES[size],
+        )}
+      >
+        <div className="h-1.5 shrink-0 bg-brand" />
+        <div className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft">
+              <img src="/icon-192.png" alt="ALAS" className="h-7 w-7 rounded-md object-contain" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-extrabold uppercase tracking-wide text-brand">ALAS</p>
+              <h2 className="truncate text-base font-extrabold text-ink">{title}</h2>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+            aria-label="Cerrar"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
