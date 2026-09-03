@@ -21,6 +21,7 @@ import {
   type AlasSsoPayload,
   type SessionSource,
 } from '@/lib/alasSso';
+import { ensureCurrentUser } from '@/services/users';
 import type { Permission, User } from '@/types';
 
 type SessionError = 'NO_SESSION' | 'NO_PERMISSION' | 'INVALID_SESSION' | null;
@@ -131,14 +132,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
     const ready = resolveAlasSession()
-      .then((payload) => {
+      .then(async (payload) => {
         if (!alive) return;
 
         if (payload) {
+          const nextUser = userFromPayload(payload);
           setSsoPayload(payload);
-          setUser(userFromPayload(payload));
+          setUser(nextUser);
           setSource('launcher');
           setError(hasModulePermission(payload) ? null : 'NO_PERMISSION');
+          // Aprovisiona al usuario del SSO en la tabla local (id = userId del token)
+          // para que las RPC lo reconozcan: sin esta fila toda escritura da 42501.
+          await ensureCurrentUser(nextUser);
           return;
         }
 

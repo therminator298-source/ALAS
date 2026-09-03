@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { MOCK_INCIDENTS } from '@/lib/mockData';
 import type {
-  Incident, IncidentItem, StatusHistoryEntry, IncidentComment, IncidentEvidence, AuditLog, User,
+  Incident, IncidentItem, StatusHistoryEntry, IncidentComment, IncidentEvidence, AuditLog,
 } from '@/types';
+
+// `listUsers` vive ahora en el servicio de usuarios; se reexporta para no romper imports.
+export { listUsers } from './users';
 
 export interface IncidentDetail {
   incident: Incident;
@@ -83,11 +86,6 @@ export async function getIncident(incidentNumber: string): Promise<IncidentDetai
   }
 }
 
-export async function listUsers(): Promise<User[]> {
-  if (!supabase) return [];
-  const { data } = await supabase.from('users').select('id,nombre,rol,activo').eq('activo', true).order('nombre');
-  return (data as User[]) ?? [];
-}
 
 // ── Acciones de workflow (RPC) ──────────────────────────────────────────────
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
