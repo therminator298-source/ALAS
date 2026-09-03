@@ -117,28 +117,13 @@
   margin-bottom: 8px;
 }
 
-.sidebar-brand__icon {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border-radius: 9px;
-  object-fit: contain;
-  box-shadow: 0 8px 16px rgb(0 0 0 / 16%);
-}
-
 .sidebar-brand__wordmark {
-  width: 100px;
+  width: 104px;
   height: auto;
-  opacity: 0;
-  transform: translateX(-8px);
-  transition:
-    opacity 250ms var(--model-ease) 80ms,
-    transform 280ms var(--model-ease) 80ms;
-}
-
-.sidebar-wave:hover .sidebar-brand__wordmark {
+  flex-shrink: 0;
+  /* En el rail (64px) el overflow del contenedor recorta y deja ver el
+     triángulo △; al expandir la barra se revela el wordmark completo. */
   opacity: 1;
-  transform: translateX(0);
 }
 
 .sidebar-icon svg {

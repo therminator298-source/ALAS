@@ -48,20 +48,13 @@ export function AppShell() {
     <div className="alas-model-layout">
       <div className="alas-model-shell">
         <Sidebar
-          badges={{ pendientes: 0, revision: 0, verificados: 0 }}
           user={user}
           sessionSource={source}
           onLogout={signOut}
           onReturnToLauncher={goToLauncher}
         />
         <section className="alas-model-stage">
-          <Topbar
-            user={user}
-            sessionSource={source}
-            onLogout={signOut}
-            onOpenSearch={() => setPaletteOpen(true)}
-            notifCount={0}
-          />
+          <Topbar notifCount={0} />
           <main ref={mainRef} className="alas-model-content pb-16 md:pb-0">
             <Outlet />
           </main>
