@@ -87,13 +87,15 @@ body {
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold
-      transition-all duration-150 ease-smooth disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
+      transition-all duration-200 ease-smooth select-none
+      disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97]
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
   }
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-dark shadow-sm;
+    @apply btn bg-brand text-white shadow-sm hover:bg-brand-dark hover:shadow-pop hover:-translate-y-px;
   }
   .btn-secondary {
-    @apply btn bg-surface text-ink-2 border border-border hover:border-border-strong hover:bg-surface-3;
+    @apply btn bg-surface text-ink-2 border border-border hover:border-border-strong hover:bg-surface-3 hover:-translate-y-px;
   }
   .btn-ghost {
     @apply btn bg-transparent text-ink-2 hover:bg-surface-3;

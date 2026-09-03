@@ -15,8 +15,9 @@ const MOCK_PRODUCTS: Product[] = [
 ];
 
 const MOCK_WAREHOUSES: Warehouse[] = [
-  { id: 'm-w1', nombre: 'Depósito Central', codigo: 'DEP-01' },
-  { id: 'm-w2', nombre: 'Depósito Fábrica', codigo: 'DEP-02' },
+  { id: 'm-w1', nombre: 'Fábrica', codigo: 'FAB' },
+  { id: 'm-w2', nombre: 'Depósito Central', codigo: 'DEP-CEN' },
+  { id: 'm-w3', nombre: 'Depósito Luque Sanber', codigo: 'DEP-LUQ' },
 ];
 
 export async function listSuppliers(): Promise<Supplier[]> {

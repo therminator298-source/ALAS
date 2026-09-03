@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, FileText, Package, Building2, type LucideIcon } from 'lucide-react';
+import gsap from 'gsap';
+import { Plus, Trash2, Save, FileText, Package, Building2, Lock, type LucideIcon } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { ReasonCards } from './ReasonCards';
 import { ProductSelectorModal } from './ProductSelectorModal';
@@ -19,19 +20,25 @@ interface DraftState {
   supplier_id: string;
   warehouse_id: string;
   reason: IncidentReason | null;
-  priority: string;
   description: string;
   items: NewIncidentItem[];
 }
 
+/** N° de documento interno autogenerado: REC-AAAAMMDD-XXXX. */
+function genDocNumber(): string {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const rnd = String(Date.now()).slice(-4);
+  return `REC-${ymd}-${rnd}`;
+}
+
 const emptyDraft = (): DraftState => ({
   emission_date: new Date().toISOString().slice(0, 10),
-  document_number: '',
+  document_number: genDocNumber(),
   invoice_number: '',
   supplier_id: '',
   warehouse_id: '',
   reason: null,
-  priority: 'NORMAL',
   description: '',
   items: [],
 });
@@ -42,7 +49,9 @@ export function NewIncident() {
   const [draft, setDraft] = useState<DraftState>(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      return raw ? { ...emptyDraft(), ...JSON.parse(raw) } : emptyDraft();
+      const base = raw ? { ...emptyDraft(), ...JSON.parse(raw) } : emptyDraft();
+      if (!base.document_number) base.document_number = genDocNumber();
+      return base;
     } catch {
       return emptyDraft();
     }
@@ -51,10 +60,23 @@ export function NewIncident() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [productModal, setProductModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     listSuppliers().then(setSuppliers);
     listWarehouses().then(setWarehouses);
+  }, []);
+
+  // Animación de entrada de los bloques (respeta reduce-motion)
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !rootRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.form-block', {
+        opacity: 0, y: 14, duration: 0.4, stagger: 0.07, ease: 'power2.out', clearProps: 'transform,opacity',
+      });
+    }, rootRef.current);
+    return () => ctx.revert();
   }, []);
 
   // Autoguardado de borrador (sección 51)
@@ -96,7 +118,7 @@ export function NewIncident() {
       supplier_id: draft.supplier_id || null,
       warehouse_id: draft.warehouse_id || null,
       reason: draft.reason,
-      priority: draft.priority,
+      priority: 'NORMAL',
       description: draft.description || null,
       emission_date: new Date(draft.emission_date).toISOString(),
       status: asDraft ? 'BORRADOR' : 'PENDIENTE',
@@ -115,7 +137,7 @@ export function NewIncident() {
   }
 
   return (
-    <div className="p-5 md:p-6 max-w-5xl mx-auto pb-24">
+    <div ref={rootRef} className="p-5 md:p-6 max-w-5xl mx-auto pb-24">
       <PageHeader title="Nueva incidencia" subtitle="Registrá una diferencia detectada en la recepción" />
 
       {/* BLOQUE 1 · Documental */}
@@ -132,11 +154,15 @@ export function NewIncident() {
               ))}
             </select>
           </Field>
-          <Field label="Número de documento">
-            <input className="input" value={draft.document_number} onChange={(e) => set('document_number', e.target.value)} placeholder="Ej: 019" />
-          </Field>
           <Field label="Número de factura">
             <input className="input" value={draft.invoice_number} onChange={(e) => set('invoice_number', e.target.value)} placeholder="Ej: 4300195182" />
+          </Field>
+          <Field label="Número de documento">
+            <div className="relative">
+              <input className="input pr-9 bg-surface-2 text-ink-2 font-mono" value={draft.document_number} readOnly tabIndex={-1} />
+              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-3" />
+            </div>
+            <span className="block text-2xs text-ink-3 mt-1">Se genera automáticamente</span>
           </Field>
           <Field label="Depósito">
             <select className="input" value={draft.warehouse_id} onChange={(e) => set('warehouse_id', e.target.value)}>
@@ -144,14 +170,6 @@ export function NewIncident() {
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>{w.nombre}</option>
               ))}
-            </select>
-          </Field>
-          <Field label="Prioridad">
-            <select className="input" value={draft.priority} onChange={(e) => set('priority', e.target.value)}>
-              <option value="BAJA">Baja</option>
-              <option value="NORMAL">Normal</option>
-              <option value="ALTA">Alta</option>
-              <option value="CRITICA">Crítica</option>
             </select>
           </Field>
         </div>
@@ -260,7 +278,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="card p-5 mb-4">
+    <section className="form-block card p-5 mb-4">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-brand" strokeWidth={2} />
