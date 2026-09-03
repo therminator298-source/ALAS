@@ -1,0 +1,261 @@
+/* ============================================================
+   PDF oficial A4 — Incidencia de Recepción
+   Documento autónomo: colores/tipografía fijos (independiente del
+   tema de la app) para que el print e impreso se vean siempre igual.
+   ============================================================ */
+
+@page {
+  size: A4 portrait;
+  margin: 14mm 14mm 12mm;
+}
+
+/* Fondo de la vista previa (pantalla) */
+.pd-viewport {
+  background: #e5e7eb;
+  min-height: 100vh;
+  padding: 24px 16px 64px;
+}
+
+/* Barra de acciones (no se imprime) */
+.pd-toolbar {
+  max-width: 210mm;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* La hoja A4 */
+.pd-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 16mm 16mm 14mm;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+  box-sizing: border-box;
+}
+
+/* ── Encabezado ── */
+.pd-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2.5px solid #111827;
+  padding-bottom: 12px;
+  gap: 16px;
+}
+.pd-brand-logo {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #b91c1c;
+  line-height: 1;
+}
+.pd-brand-sub {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #374151;
+  margin-top: 3px;
+}
+.pd-brand-addr {
+  font-size: 9.5px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+.pd-doc {
+  text-align: right;
+  min-width: 46%;
+}
+.pd-doc-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #111827;
+}
+.pd-doc-number {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  color: #b91c1c;
+  margin-top: 2px;
+}
+.pd-doc-status {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border: 1.5px solid #111827;
+  border-radius: 999px;
+  color: #111827;
+}
+
+/* ── Grilla de datos ── */
+.pd-section-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #b91c1c;
+  margin: 18px 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+.pd-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 20px;
+}
+.pd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pd-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+}
+.pd-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.pd-value.mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+}
+.pd-desc {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 10.5px;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+/* ── Tabla de ítems ── */
+.pd-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+.pd-table th {
+  background: #111827;
+  color: #ffffff;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 7px;
+  text-align: left;
+}
+.pd-table td {
+  padding: 6px 7px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 10px;
+  color: #1f2937;
+  vertical-align: top;
+}
+.pd-table tr:nth-child(even) td {
+  background: #f9fafb;
+}
+.pd-num {
+  text-align: right;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.pd-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+}
+.pd-empty {
+  padding: 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Firmas ── */
+.pd-signs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-top: 46px;
+}
+.pd-sign {
+  text-align: center;
+}
+.pd-sign-line {
+  border-top: 1.5px solid #111827;
+  margin: 0 10px 6px;
+  padding-top: 6px;
+}
+.pd-sign-role {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #374151;
+}
+.pd-sign-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  min-height: 14px;
+}
+
+/* ── Pie ── */
+.pd-foot {
+  margin-top: 28px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #9ca3af;
+}
+
+/* ── Reglas de impresión ── */
+@media print {
+  html, body {
+    background: #ffffff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .pd-viewport {
+    background: #ffffff;
+    padding: 0;
+  }
+  .pd-sheet {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .pd-table th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .pd-table tr {
+    page-break-inside: avoid;
+  }
+  .pd-signs {
+    page-break-inside: avoid;
+  }
+}

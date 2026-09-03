@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, CheckCircle2, UserPlus, Wrench, Lock, RotateCcw, Ban, Send, History, ShieldCheck, Image as ImageIcon,
+  ArrowLeft, CheckCircle2, UserPlus, Wrench, Lock, RotateCcw, Ban, Send, History, ShieldCheck, Image as ImageIcon, Printer,
 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ReasonBadge } from '@/components/ui/ReasonBadge';
@@ -86,6 +86,12 @@ export function IncidentDetail() {
         <StatusBadge status={inc.status} />
         <PriorityBadge priority={inc.priority} />
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/incidents/${inc.incident_number}/print`)}
+            className="btn-secondary h-9"
+          >
+            <Printer className="h-4 w-4" strokeWidth={2} /> Imprimir
+          </button>
           {actions.map((a) => {
             const Icon = a.icon;
             return (

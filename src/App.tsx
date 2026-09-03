@@ -8,11 +8,15 @@ import { IncidentDetail } from '@/features/incidents/IncidentDetail';
 import { Reports } from '@/pages/Reports';
 import { Suppliers } from '@/pages/Suppliers';
 import { Products } from '@/pages/Products';
+import { IncidentPrint } from '@/pages/IncidentPrint';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Documento imprimible A4 — fuera del AppShell (sin sidebar/topbar) */}
+        <Route path="/incidents/:id/print" element={<IncidentPrint />} />
+
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
