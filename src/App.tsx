@@ -9,6 +9,7 @@ import { Reports } from '@/pages/Reports';
 import { Suppliers } from '@/pages/Suppliers';
 import { Products } from '@/pages/Products';
 import { IncidentPrint } from '@/pages/IncidentPrint';
+import { Audit } from '@/pages/Audit';
 
 export default function App() {
   return (
@@ -33,7 +34,7 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/audit" element={<Placeholder title="Auditoría" phase="Fase 10" />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="/settings" element={<Placeholder title="Configuración" phase="Fase 12" />} />
 
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
