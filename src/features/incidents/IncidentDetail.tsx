@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, CheckCircle2, UserPlus, Wrench, Lock, RotateCcw, Ban, Send, History, ShieldCheck, Image as ImageIcon, Printer,
+  ArrowLeft, CheckCircle2, UserPlus, Wrench, Lock, RotateCcw, Ban, Send, History, ShieldCheck, Printer,
 } from 'lucide-react';
+import { EvidencePanel } from './EvidencePanel';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ReasonBadge } from '@/components/ui/ReasonBadge';
 import { PriorityBadge } from '@/components/ui/PriorityBadge';
@@ -170,22 +171,8 @@ export function IncidentDetail() {
             )}
           </Card>
 
-          {/* Evidencias (upload en Fase 8) */}
-          <Card title={`Evidencias (${detail.evidences.length})`}>
-            {detail.evidences.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-ink-3">
-                <ImageIcon className="h-4 w-4" /> Sin evidencias. La carga de fotos/archivos llega en la Fase 8.
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {detail.evidences.map((e) => (
-                  <a key={e.id} href={e.file_url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg border border-border overflow-hidden bg-surface-3">
-                    <img src={e.file_url} alt="evidencia" className="w-full h-full object-cover" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </Card>
+          {/* Evidencias (Fase 8: Storage + cámara) */}
+          <EvidencePanel incidentId={inc.id} evidences={detail.evidences} onChange={load} />
 
           {/* Comentarios */}
           <Card title={`Comentarios (${detail.comments.length})`}>
