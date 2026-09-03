@@ -1,10 +1,16 @@
 node_modules/
+dist/
+dist-ssr/
 
-# Configuración local de desarrollo únicamente
-# supabase-config.js y sso-config.js se commitean con valores de producción
-
+# Configuración local (credenciales via variables de entorno)
 .env
 .env.local
+.env.*.local
+
 *.log
+npm-debug.log*
 .DS_Store
 Thumbs.db
+.vite/
+
+*.tsbuildinfo

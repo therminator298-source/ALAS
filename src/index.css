@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Design tokens — Incidencias de Recepción (industrial/enterprise)
+   Paleta sobria: blanco, grises neutros, azul empresarial.
+   Semántica de negocio en colores dedicados (sección 38 del spec).
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  --surface: 255 255 255;       /* fondo tarjetas */
+  --surface-2: 248 250 252;     /* fondo app */
+  --surface-3: 241 245 249;     /* zonas / headers de tabla */
+  --border: 226 232 240;
+  --border-strong: 203 213 225;
+
+  --ink: 15 23 42;              /* texto principal */
+  --ink-2: 71 85 105;          /* texto secundario */
+  --ink-3: 148 163 184;        /* texto terciario / muted */
+
+  --brand: 11 95 141;          /* azul ALAS empresarial */
+  --brand-dark: 8 72 106;
+  --brand-soft: 224 237 250;
+
+  /* Semántica de motivo */
+  --sobrante: 37 99 235;       /* azul */
+  --faltante: 220 38 38;       /* rojo */
+  --averiado: 234 88 12;       /* naranja */
+
+  /* Semántica de estado */
+  --pendiente: 202 138 4;      /* amarillo/ámbar */
+  --revision: 124 58 237;      /* violeta */
+  --terminado: 22 163 74;      /* verde */
+
+  /* Prioridad / semáforo */
+  --ok: 22 163 74;
+  --warn: 202 138 4;
+  --danger: 234 88 12;
+  --critical: 220 38 38;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--surface-2));
+  color: rgb(var(--ink));
+  font-family: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Scrollbars discretas */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong));
+  border-radius: 999px;
+  border: 2px solid rgb(var(--surface-2));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink-3));
+}
+
+/* Foco visible accesible (sección 55) */
+:focus-visible {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-card shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold
+      transition-all duration-150 ease-smooth disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-dark shadow-sm;
+  }
+  .btn-secondary {
+    @apply btn bg-surface text-ink-2 border border-border hover:border-border-strong hover:bg-surface-3;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-2 hover:bg-surface-3;
+  }
+  .input {
+    @apply h-10 w-full px-3 rounded-lg border border-border bg-surface text-sm text-ink
+      placeholder:text-ink-3 transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 h-7 pl-2.5 pr-2 rounded-full text-2xs font-bold;
+  }
+}
