@@ -17,7 +17,7 @@ export function Sidebar({ collapsed, onToggle, badges = {} }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex flex-col shrink-0 border-r border-border bg-surface transition-[width] duration-300 ease-smooth',
+        'hidden md:flex flex-col shrink-0 border-r border-border bg-surface transition-[width] duration-300 ease-smooth',
         collapsed ? 'w-16' : 'w-64',
       )}
     >
