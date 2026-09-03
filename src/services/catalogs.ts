@@ -53,6 +53,39 @@ export async function listWarehouses(): Promise<Warehouse[]> {
   return MOCK_WAREHOUSES;
 }
 
+export interface ProductPage {
+  rows: Product[];
+  total: number;
+  live: boolean;
+}
+
+/** Catálogo paginado con búsqueda server-side (código o descripción). */
+export async function listProducts(term: string, page = 1, pageSize = 50): Promise<ProductPage> {
+  const t = term.trim();
+  if (supabase) {
+    try {
+      let q = supabase
+        .from('products')
+        .select('id,codigo,descripcion,ean,sku,um', { count: 'exact' })
+        .order('codigo');
+      if (t) q = q.or(`codigo.ilike.%${t}%,descripcion.ilike.%${t}%`);
+      const from = (page - 1) * pageSize;
+      q = q.range(from, from + pageSize - 1);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data as Product[]) ?? [], total: count ?? 0, live: true };
+    } catch (e) {
+      console.warn('[catalogs] listProducts fallback mock:', (e as Error).message);
+    }
+  }
+  const lo = t.toLowerCase();
+  const filtered = MOCK_PRODUCTS.filter(
+    (p) => !lo || p.codigo.toLowerCase().includes(lo) || p.descripcion.toLowerCase().includes(lo),
+  );
+  const start = (page - 1) * pageSize;
+  return { rows: filtered.slice(start, start + pageSize), total: filtered.length, live: false };
+}
+
 export async function searchProducts(term: string): Promise<Product[]> {
   const t = term.trim();
   if (supabase) {

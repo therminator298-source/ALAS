@@ -5,6 +5,9 @@ import { Placeholder } from '@/pages/Placeholder';
 import { IncidentsView } from '@/features/incidents/IncidentsView';
 import { NewIncident } from '@/features/incidents/NewIncident';
 import { IncidentDetail } from '@/features/incidents/IncidentDetail';
+import { Reports } from '@/pages/Reports';
+import { Suppliers } from '@/pages/Suppliers';
+import { Products } from '@/pages/Products';
 
 export default function App() {
   return (
@@ -23,10 +26,9 @@ export default function App() {
           <Route path="/incidents/completed" element={<IncidentsView title="Terminadas" fixedStatus="TERMINADO" />} />
           <Route path="/incidents/:id" element={<IncidentDetail />} />
 
-          <Route path="/reports" element={<Placeholder title="Reportes" phase="Fase 9" />} />
-          <Route path="/suppliers" element={<Placeholder title="Proveedores" phase="Fase 9" />} />
-          <Route path="/suppliers/:id" element={<Placeholder title="Perfil de proveedor" phase="Fase 9" />} />
-          <Route path="/products" element={<Placeholder title="Productos" phase="Fase 9" />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/products" element={<Products />} />
           <Route path="/audit" element={<Placeholder title="Auditoría" phase="Fase 10" />} />
           <Route path="/settings" element={<Placeholder title="Configuración" phase="Fase 12" />} />
 
