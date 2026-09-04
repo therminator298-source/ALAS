@@ -51,6 +51,10 @@
   flex-direction: column;
   overflow: hidden;
   background: #fff;
+  /* Igual que CajaVenta: contexto de apilado propio (position + z-index) para
+     que el expand del sidebar no obligue a repintar el contenido → hover fluido. */
+  position: relative;
+  z-index: 1;
 }
 
 .alas-model-content {
