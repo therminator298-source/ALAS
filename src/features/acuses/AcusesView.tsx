@@ -56,6 +56,8 @@ export function AcusesView() {
         </div>
         <div className="flex items-center justify-center overflow-x-auto">
           <SegStrip
+            equal
+            className="w-full max-w-[940px]"
             items={TABS.map((t) => ({ value: t.v, label: t.label, icon: t.icon }))}
             value={active}
             onChange={go}
