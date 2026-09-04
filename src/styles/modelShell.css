@@ -69,10 +69,11 @@
   inset: 0 auto 0 0;
   width: 64px;
   overflow: hidden;
-  /* Mismo patrón que CajaVenta: transición simple de width (280ms, expo.out).
-     Nada de contain/translateZ/will-change: eso recortaba la sombra y volvía
-     rara la animación. */
   transition: width 280ms var(--model-ease);
+  /* Pre-crea la capa de composición al cargar (translateZ), para que el PRIMER
+     hover no pague la creación/rasterizado de la capa (ese era el trabón inicial).
+     Sin `contain` (recortaba la sombra) — solo la promoción a capa propia. */
+  transform: translateZ(0);
   background: linear-gradient(180deg, #0e6fa8 0%, #0b5f8d 55%, #084f78 100%);
   display: flex;
   align-items: stretch;
