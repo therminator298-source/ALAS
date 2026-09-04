@@ -38,6 +38,7 @@ export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProp
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
         <NavLink to="/dashboard" className="sidebar-brand" aria-label="Ir al dashboard">
+          <img src="/icon-192.png" alt="" className="sidebar-brand__icon" />
           <img src="/logo-alas-blanco.png" alt="ALAS" className="sidebar-brand__wordmark" />
         </NavLink>
 
