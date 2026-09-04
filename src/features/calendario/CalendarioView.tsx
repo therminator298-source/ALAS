@@ -131,7 +131,7 @@ export function CalendarioView() {
       </div>
 
       {/* Cuerpo full-height */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_390px] gap-4">
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4">
         {/* Calendario */}
         <div className="cal-panel card p-4 flex flex-col min-h-0">
           <div className="shrink-0 flex items-center gap-2 mb-3">
