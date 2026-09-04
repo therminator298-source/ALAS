@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import {
-  FileText, Search, Plus, Clock, Truck, CheckCircle2, Ban, CalendarClock, Users,
+  FileText, Search, Plus, Clock, Truck, CheckCircle2, Ban, CalendarClock, Users, Download,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonTable } from '@/components/ui/SkeletonTable';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
-import { listAcuses, getAcuseDashboard } from './acuseApi';
+import { listAcuses, getAcuseDashboard, downloadAcusesCsv } from './acuseApi';
+import { AcuseFormModal } from './AcuseFormModal';
+import { AcuseDetailModal } from './AcuseDetailModal';
 import { ACUSE_ESTADOS, estadoKey, type AcuseRow, type AcuseDashboard, type AcuseEstado } from './types';
 
 const ESTADO_STYLE: Record<string, string> = {
@@ -42,10 +44,15 @@ export function AcusesView() {
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [estado, setEstado] = useState<'all' | AcuseEstado>('all');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formId, setFormId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
-  useEffect(() => { getAcuseDashboard().then(setDash); }, []);
+  useEffect(() => { getAcuseDashboard().then(setDash); }, [reloadKey]);
   useEffect(() => { const t = setTimeout(() => setDebounced(search.trim()), 300); return () => clearTimeout(t); }, [search]);
 
   useEffect(() => {
@@ -56,7 +63,21 @@ export function AcusesView() {
       setRows(res.rows); setTotal(res.total); setLive(res.live); setLoading(false);
     });
     return () => { alive = false; };
-  }, [estado, debounced]);
+  }, [estado, debounced, reloadKey]);
+
+  const reload = () => setReloadKey((k) => k + 1);
+  const openNuevo = () => { setFormId(null); setFormOpen(true); };
+  const openEditar = (id: number) => { setDetailId(null); setFormId(id); setFormOpen(true); };
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const n = await downloadAcusesCsv({ estado, search: debounced || undefined });
+      toast(`${n} acuses exportados a CSV.`, 'ok');
+    } catch (e) {
+      toast((e as Error).message || 'No se pudo exportar.', 'err');
+    } finally { setExporting(false); }
+  }
 
   useEffect(() => {
     if (!rootRef.current) return;
@@ -93,9 +114,14 @@ export function AcusesView() {
         title="Acuses"
         subtitle="Gestión de acuses de recibo · panel operativo"
         actions={
-          <button className="btn-primary" onClick={() => toast('El alta de acuses llega en la próxima fase.', 'ok')}>
-            <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo acuse
-          </button>
+          <>
+            <button className="btn-secondary" onClick={exportCsv} disabled={exporting}>
+              <Download className="h-4 w-4" /> {exporting ? 'Exportando…' : 'Exportar CSV'}
+            </button>
+            <button className="btn-primary" onClick={openNuevo}>
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo acuse
+            </button>
+          </>
         }
       />
 
@@ -143,7 +169,7 @@ export function AcusesView() {
             </thead>
             <tbody ref={tbodyRef} className="divide-y divide-border">
               {!loading && rows.map((a) => (
-                <tr key={a.id} data-row className="h-[52px] hover:bg-surface-3 transition-colors">
+                <tr key={a.id} data-row onClick={() => setDetailId(a.id)} className="h-[52px] hover:bg-surface-3 cursor-pointer transition-colors">
                   <td className="px-4 font-mono text-xs font-bold text-ink whitespace-nowrap">{a.nro_acuse}</td>
                   <td className="px-4 font-semibold text-ink max-w-[240px] truncate">{a.cliente_nombre ?? a.cod_cliente ?? '—'}</td>
                   <td className="px-4 text-ink-2 whitespace-nowrap">{a.cliente_ciudad ?? a.zona ?? '—'}</td>
@@ -170,6 +196,20 @@ export function AcusesView() {
           {live ? `Datos en vivo · Supabase · ${dash?.repartidores ?? 0} repartidores` : 'Vista previa · datos de ejemplo (creá el Supabase de Acuses y corré acuse_schema.sql)'}
         </span>
       </div>
+
+      <AcuseFormModal
+        open={formOpen}
+        acuseId={formId}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => { setFormOpen(false); reload(); }}
+      />
+      <AcuseDetailModal
+        open={detailId != null}
+        acuseId={detailId}
+        onClose={() => setDetailId(null)}
+        onChanged={reload}
+        onEdit={openEditar}
+      />
     </div>
   );
 }
