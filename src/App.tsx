@@ -10,6 +10,7 @@ import { Suppliers } from '@/pages/Suppliers';
 import { Products } from '@/pages/Products';
 import { IncidentPrint } from '@/pages/IncidentPrint';
 import { Audit } from '@/pages/Audit';
+import { AcusesView } from '@/features/acuses/AcusesView';
 
 export default function App() {
   return (
@@ -38,7 +39,7 @@ export default function App() {
           <Route path="/settings" element={<Placeholder title="Configuración" phase="Fase 12" />} />
 
           {/* Apartados nuevos (se construyen por fase, cada uno con su Supabase) */}
-          <Route path="/acuses" element={<Placeholder title="Acuses" phase="próxima fase — módulo Acuses con Supabase nuevo" />} />
+          <Route path="/acuses" element={<AcusesView />} />
           <Route path="/calendario" element={<Placeholder title="Calendario de tareas" phase="próxima fase — módulo PRO con Supabase nuevo" />} />
 
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
