@@ -48,8 +48,12 @@ export function AcusesView() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header del módulo Acuses — tabs centrados, botones azules PRO */}
-      <div className="shrink-0 border-b border-border bg-surface px-4 md:px-6 py-3">
+      {/* Header del módulo Acuses — título a la izquierda, tabs centrados */}
+      <div className="relative shrink-0 border-b border-border bg-surface px-4 md:px-6 py-3">
+        <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <ClipboardCheck className="h-5 w-5 text-brand" strokeWidth={2.2} />
+          <span className="hidden sm:block text-base font-extrabold text-ink">Acuses</span>
+        </div>
         <div className="flex items-center justify-center gap-2 flex-wrap">
           {TABS.map((t) => {
             const Icon = t.icon;
