@@ -410,13 +410,14 @@
           to { opacity: 0; transform: translateY(calc(-100% - 18px)) scale(.98); }
         }
         .view-enter {
-          animation: dashboardViewIn 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+          animation: dashboardViewIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
           transform-origin: top center;
+          will-change: transform, opacity;
         }
         @keyframes dashboardViewIn {
           from {
             opacity: 0;
-            transform: translateY(10px) scale(0.992);
+            transform: translateY(7px) scale(0.995);
           }
           to {
             opacity: 1;
@@ -3366,7 +3367,7 @@
     node.classList.remove('view-enter');
     void node.offsetWidth;
     node.classList.add('view-enter');
-    window.setTimeout(() => node.classList.remove('view-enter'), 420);
+    window.setTimeout(() => node.classList.remove('view-enter'), 340);
   }
 
   function resetPanelPages() {
