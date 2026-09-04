@@ -47,11 +47,6 @@ export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProp
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
-        <NavLink to="/dashboard" className="sidebar-brand" aria-label="Ir al inicio">
-          <img src="/logo-icon.png" alt="" className="sidebar-brand__icon" />
-          <img src="/logo-alas-blanco.png" alt="ALAS" className="sidebar-brand__wordmark" />
-        </NavLink>
-
         {SIDEBAR_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.match.some((p) => pathname === p || pathname.startsWith(p + '/'));
