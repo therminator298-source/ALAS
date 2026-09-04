@@ -12,6 +12,7 @@ import { IncidentPrint } from '@/pages/IncidentPrint';
 import { Audit } from '@/pages/Audit';
 import { AcusesView } from '@/features/acuses/AcusesView';
 import { AcusePrint } from '@/pages/AcusePrint';
+import { CalendarioView } from '@/features/calendario/CalendarioView';
 
 export default function App() {
   return (
@@ -42,7 +43,7 @@ export default function App() {
 
           {/* Apartados nuevos (se construyen por fase, cada uno con su Supabase) */}
           <Route path="/acuses" element={<AcusesView />} />
-          <Route path="/calendario" element={<Placeholder title="Calendario de tareas" phase="próxima fase — módulo PRO con Supabase nuevo" />} />
+          <Route path="/calendario" element={<CalendarioView />} />
 
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>
