@@ -11,7 +11,6 @@ import { Products } from '@/pages/Products';
 import { IncidentPrint } from '@/pages/IncidentPrint';
 import { Audit } from '@/pages/Audit';
 import { AcusesView } from '@/features/acuses/AcusesView';
-import { AcusePrint } from '@/pages/AcusePrint';
 import { CalendarioView } from '@/features/calendario/CalendarioView';
 
 export default function App() {
@@ -20,7 +19,6 @@ export default function App() {
       <Routes>
         {/* Documentos imprimibles A4 — fuera del AppShell (sin sidebar/topbar) */}
         <Route path="/incidents/:id/print" element={<IncidentPrint />} />
-        <Route path="/acuses/:id/print" element={<AcusePrint />} />
 
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
