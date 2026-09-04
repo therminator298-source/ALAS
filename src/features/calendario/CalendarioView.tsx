@@ -122,24 +122,26 @@ export function CalendarioView() {
   return (
     <div ref={rootRef} className="flex flex-col h-full p-4 md:p-5 gap-3">
       {/* Header propio del módulo */}
-      <div className="shrink-0 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-brand" strokeWidth={2} />
-          <div>
-            <h1 className="text-xl font-extrabold text-ink leading-tight">Calendario de tareas</h1>
-            <p className="text-2xs font-semibold text-ink-3">Planificación por depósito</p>
+      <div className="shrink-0 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-6 w-6 text-brand" strokeWidth={2} />
+            <div>
+              <h1 className="text-xl font-extrabold text-ink leading-tight">Calendario de tareas</h1>
+              <p className="text-2xs font-semibold text-ink-3">Planificación por depósito</p>
+            </div>
           </div>
+          <button className="btn-primary ml-auto" onClick={() => openNew(selectedDay ?? tISO)}>
+            <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
+          </button>
         </div>
-        <div className="dep-seg ml-1 overflow-x-auto">
+        <div className="dep-seg flex justify-center overflow-x-auto pb-0.5">
           <SegStrip
             items={DEPOSITOS.map((d) => ({ value: d, label: d, icon: DEP_ICON[d] ?? Warehouse, count: depCounts[d] ?? 0 }))}
             value={deposito}
             onChange={setDeposito}
           />
         </div>
-        <button className="btn-primary ml-auto" onClick={() => openNew(selectedDay ?? tISO)}>
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
-        </button>
       </div>
 
       {/* Cuerpo full-height */}
