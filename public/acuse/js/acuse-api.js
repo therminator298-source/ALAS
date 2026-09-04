@@ -281,6 +281,171 @@
     return { items: (r.data || []).map(function (a) { return { Material_SAP: a.material, Descr_SAP: a.descripcion, UM_SAP: a.um }; }) };
   }
 
+  /* ── Dashboard interactivo ──────────────────────────────────────────────── */
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function parseD(s) { var a = String(s || '').slice(0, 10).split('-').map(Number); return new Date(a[0], (a[1] || 1) - 1, a[2] || 1); }
+  function monthRange(y, m) { var end = new Date(y, m, 0); return { start: y + '-' + pad2(m) + '-01', end: y + '-' + pad2(m) + '-' + pad2(end.getDate()) }; }
+  function monthStart(s) { var d = parseD(s); return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+  function startOfWeek(d) { var v = new Date(d.getFullYear(), d.getMonth(), d.getDate()); v.setDate(v.getDate() - ((v.getDay() + 6) % 7)); return v; }
+  function endOfWeek(d) { var v = new Date(d.getFullYear(), d.getMonth(), d.getDate()); v.setDate(v.getDate() + 6); return v; }
+  function dayLabel(s) { return parseD(s).toLocaleDateString('es-PY', { day: '2-digit', month: 'short' }); }
+  function monthLabel(s) { return parseD(s).toLocaleDateString('es-PY', { month: 'short' }); }
+  function weekLabel(a, b) { var sd = pad2(a.getDate()), ed = pad2(b.getDate()); if (a.getTime() === b.getTime()) return sd + ' ' + monthLabel(ymd(a)); if (a.getMonth() === b.getMonth()) return sd + '-' + ed + ' ' + monthLabel(ymd(a)); return sd + ' ' + monthLabel(ymd(a)) + '-' + ed + ' ' + monthLabel(ymd(b)); }
+
+  function resolvePeriod(q) {
+    if ((q.start || '') || (q.end || '')) {
+      var start = q.start, end = q.end, anchor = q.anchor || start;
+      return { scope: q.scope === 'week' ? 'week' : 'month', start: start, end: end, anchor: anchor, year: +String(anchor).slice(0, 4), month: +String(anchor).slice(5, 7) };
+    }
+    var now = new Date(); var year = parseInt(q.year, 10) || now.getFullYear(); var month = parseInt(q.month, 10) || (now.getMonth() + 1);
+    var r = monthRange(year, month);
+    return { scope: 'month', start: r.start, end: r.end, anchor: r.start, year: year, month: month };
+  }
+  async function resolveSummaryPeriod(client, q) {
+    if (String(q.scope || '').toLowerCase() === 'all') {
+      var mm = await client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: true }).limit(1);
+      var xx = await client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: false }).limit(1);
+      var now = new Date();
+      var start = (mm.data && mm.data[0]) ? mm.data[0].fecha_emision : monthRange(now.getFullYear(), now.getMonth() + 1).start;
+      var end = (xx.data && xx.data[0]) ? xx.data[0].fecha_emision : ymd(now);
+      return { scope: 'all', start: start, end: end, anchor: q.anchor || end, year: +String(end).slice(0, 4), month: +String(end).slice(5, 7) };
+    }
+    return resolvePeriod(q);
+  }
+  function zoneOf(r) { return (String(r.zona || '').trim()) || (String(r.cliente_ciudad || '').trim()) || 'Sin zona'; }
+
+  async function fetchRange(client, fromISO, toISO) {
+    var r = await client.from('acuses').select('fecha_emision,estado,zona,cliente_ciudad,activo').gte('fecha_emision', fromISO).lte('fecha_emision', toISO).limit(20000);
+    return r.data || [];
+  }
+
+  async function summaryFn(client, q) {
+    var p = await resolveSummaryPeriod(client, q);
+    var anchorMonth = monthStart(p.anchor);
+    var trendStart = p.scope === 'all' ? ymd(monthStart(p.start)) : ymd(new Date(anchorMonth.getFullYear(), anchorMonth.getMonth() - 5, 1));
+    var trendEnd = p.scope === 'all' ? p.end : ymd(endOfMonth(anchorMonth));
+    var lo = trendStart < p.start ? trendStart : p.start;
+    var hi = trendEnd > p.end ? trendEnd : p.end;
+    var rows = await fetchRange(client, lo, hi);
+    var inPeriod = rows.filter(function (r) { return r.fecha_emision >= p.start && r.fecha_emision <= p.end; });
+    var act = inPeriod.filter(function (r) { return Number(r.activo) !== 0; });
+    var kpis = { pendientes: 0, entregados: 0, acuses: 0, en_transito: 0, anulados: 0, repartidores: 0 };
+    var porEstadoMap = {};
+    act.forEach(function (r) {
+      kpis.acuses++; porEstadoMap[r.estado] = (porEstadoMap[r.estado] || 0) + 1;
+      var k = estadoUiKey(r.estado);
+      if (k === 'entregado') kpis.entregados++; else if (k === 'en_transito') kpis.en_transito++; else if (k === 'anulado') kpis.anulados++; else kpis.pendientes++;
+    });
+    var legacy = inPeriod.filter(function (r) { return Number(r.activo) === 0; }).length;
+    if (legacy > 0) { kpis.anulados += legacy; kpis.acuses += legacy; }
+    var repC = await client.from('repartidores').select('*', { count: 'exact', head: true }).eq('activo', true);
+    kpis.repartidores = repC.count || 0;
+    // zonas top 8
+    var zmap = {}; act.forEach(function (r) { var z = zoneOf(r); zmap[z] = (zmap[z] || 0) + 1; });
+    var zonas = Object.keys(zmap).map(function (z) { return { zona: z, total: zmap[z] }; }).sort(function (a, b) { return b.total - a.total; }).slice(0, 8);
+    // por dia
+    var dmap = {}; act.forEach(function (r) { dmap[r.fecha_emision] = (dmap[r.fecha_emision] || 0) + 1; });
+    var acusesPorDia = Object.keys(dmap).sort().map(function (f) { return { fecha: f, etiqueta: dayLabel(f), total: dmap[f] }; });
+    // por semana
+    var buckets = []; var idx = {}; var cur = startOfWeek(parseD(p.start)); var pend = parseD(p.end); var pstart = parseD(p.start);
+    while (cur.getTime() <= pend.getTime()) {
+      var rawStart = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()); var rawEnd = endOfWeek(rawStart);
+      var es = rawStart.getTime() < pstart.getTime() ? pstart : rawStart; var ee = rawEnd.getTime() > pend.getTime() ? pend : rawEnd;
+      var key = ymd(rawStart); var b = { semana: key, inicio: ymd(es), fin: ymd(ee), etiqueta: weekLabel(es, ee), total: 0 };
+      buckets.push(b); idx[key] = b; cur.setDate(cur.getDate() + 7);
+    }
+    acusesPorDia.forEach(function (row) { var k = ymd(startOfWeek(parseD(row.fecha))); if (idx[k]) idx[k].total += row.total; });
+    // por mes
+    var mmap = {}; rows.filter(function (r) { return Number(r.activo) !== 0 && r.fecha_emision >= trendStart && r.fecha_emision <= trendEnd; }).forEach(function (r) { var mk = r.fecha_emision.slice(0, 7) + '-01'; mmap[mk] = (mmap[mk] || 0) + 1; });
+    var months = []; var mc = monthStart(trendStart); var ml = monthStart(trendEnd);
+    while (mc.getTime() <= ml.getTime()) { var mk = ymd(mc); months.push({ mes: mk, etiqueta: monthLabel(mk), total: mmap[mk] || 0 }); mc.setMonth(mc.getMonth() + 1); }
+    var dt = Math.max(kpis.acuses, 0);
+    var donut = { entregados: kpis.entregados, pendientes: kpis.pendientes, en_transito: kpis.en_transito, anulados: kpis.anulados, total: dt,
+      porcentajeEntregados: dt > 0 ? Math.round(kpis.entregados / dt * 100) : 0, porcentajePendientes: dt > 0 ? Math.round(kpis.pendientes / dt * 100) : 0,
+      porcentajeTransito: dt > 0 ? Math.round(kpis.en_transito / dt * 100) : 0, porcentajeAnulados: dt > 0 ? Math.round(kpis.anulados / dt * 100) : 0 };
+    var porEstado = Object.keys(porEstadoMap).map(function (k) { return { Estado: k, total: porEstadoMap[k] }; });
+    if (legacy > 0) porEstado.push({ Estado: 'Anulado', total: legacy });
+    return { periodo: { scope: p.scope, year: p.year, month: p.month, start: p.start, end: p.end, anchor: p.anchor }, kpis: kpis, donut: donut, porEstado: porEstado, zonas: zonas, acusesPorDia: acusesPorDia, acusesPorSemana: buckets, acusesPorMes: months };
+  }
+
+  async function calendarFn(client, q) {
+    var p = resolvePeriod(q);
+    var rows = (await fetchRange(client, p.start, p.end)).filter(function (r) { return Number(r.activo) !== 0; });
+    var map = {};
+    rows.forEach(function (r) { var d = map[r.fecha_emision] || { total: 0, entregados: 0 }; d.total++; if (estadoUiKey(r.estado) === 'entregado') d.entregados++; map[r.fecha_emision] = d; });
+    var days = Object.keys(map).sort().map(function (f) { var d = map[f]; return { fecha: f, total: d.total, entregados: d.entregados, pendientes: Math.max(d.total - d.entregados, 0), estadoDia: d.total > 0 && d.entregados === d.total ? 'entregado' : 'pendiente' }; });
+    return { scope: p.scope, year: p.year, month: p.month, start: p.start, end: p.end, anchor: p.anchor, days: days };
+  }
+
+  function kpiMatch(kpi, r) {
+    var norm = normEstado(r.estado); var inactive = Number(r.activo) === 0;
+    var k = String(kpi || '').toLowerCase();
+    if (['acuse', 'acuses', 'total', 'todos', 'all'].indexOf(k) >= 0) return !inactive;
+    if (['pendiente', 'pendientes'].indexOf(k) >= 0) return !inactive && norm === 'Pendiente';
+    if (['entregado', 'entregados', 'completado', 'completados'].indexOf(k) >= 0) return !inactive && norm === 'Entregado';
+    if (['en_transito', 'transito', 'en_reparto', 'reparto'].indexOf(k) >= 0) return !inactive && norm === 'En Reparto';
+    if (['anulado', 'anulados', 'cancelado', 'cancelados'].indexOf(k) >= 0) return inactive || norm === 'Anulado';
+    return !inactive;
+  }
+
+  async function kpiListFn(client, kpi, q) {
+    var includeInactive = String(kpi).toLowerCase().indexOf('anulad') >= 0;
+    var query = client.from('acuses').select('*,acuse_detalle(cantidad)');
+    if (!includeInactive) query = query.eq('activo', true);
+    if (q.fecha) query = query.eq('fecha_emision', q.fecha);
+    if (q.codCliente) query = query.eq('cod_cliente', q.codCliente);
+    if (q.idRepartidor) query = query.eq('repartidor_id', q.idRepartidor);
+    query = query.order('fecha_emision', { ascending: false }).limit(5000);
+    var res = await query;
+    var reps = await client.from('repartidores').select('id,codigo');
+    var repMap = {}; (reps.data || []).forEach(function (r) { repMap[r.id] = r.codigo; });
+    var all = (res.data || []).filter(function (r) { return kpiMatch(kpi, r); });
+    var fetchAll = ['1', 'true', 'all'].indexOf(String(q.all || '').toLowerCase()) >= 0;
+    var limit = fetchAll ? all.length : Math.min(parseInt(q.limit, 10) || 8, 500);
+    var offset = fetchAll ? 0 : (parseInt(q.offset, 10) || 0);
+    var pageRows = all.slice(offset, offset + limit);
+    var items = pageRows.map(function (r) {
+      var det = r.acuse_detalle || [];
+      return {
+        ID_Acuse: r.id, Nro_Acuse: r.nro_acuse, Cod_Cliente: r.cod_cliente,
+        Estado: Number(r.activo) === 0 ? 'Anulado' : r.estado, Fecha_Emision: r.fecha_emision, Fecha_Entrega: r.fecha_entrega,
+        ID_Repartidor: r.repartidor_id, Observacion: r.observacion, Zona: r.zona,
+        Codigo_Repartidor: repMap[r.repartidor_id] || null, Nombre_Repartidor: r.repartidor_nombre,
+        Nom_Cliente: r.cliente_nombre, Ciudad_Cliente: r.cliente_ciudad, Zona_Cliente: r.zona, Direc_Cliente: r.cliente_direccion, Ruc_Cliente: r.cliente_ruc,
+        Detalle_Items: det.length, Detalle_Cantidad_Total: det.reduce(function (a, d) { return a + (Number(d.cantidad) || 0); }, 0),
+        Motivo_Anulacion: null
+      };
+    });
+    return { items: items, total: all.length, limit: fetchAll ? all.length : limit, offset: offset };
+  }
+
+  async function repartidoresFn(client, q) {
+    var query = client.from('acuses').select('repartidor_id,repartidor_nombre,estado,zona,activo').eq('activo', true).limit(20000);
+    if (q.fecha) query = query.eq('fecha_emision', q.fecha);
+    if (q.codCliente) query = query.eq('cod_cliente', q.codCliente);
+    if (q.idRepartidor) query = query.eq('repartidor_id', q.idRepartidor);
+    var res = await query;
+    var reps = await client.from('repartidores').select('id,codigo,nombre');
+    var repInfo = {}; (reps.data || []).forEach(function (r) { repInfo[r.id] = r; });
+    var agg = {};
+    (res.data || []).forEach(function (r) {
+      if (!r.repartidor_id) return;
+      var g = agg[r.repartidor_id] || { ID: r.repartidor_id, Codigo_Repartidor: (repInfo[r.repartidor_id] || {}).codigo || null, Nombre_Repartidor: r.repartidor_nombre || (repInfo[r.repartidor_id] || {}).nombre || '—', zona: null, acuses: 0, entregas: 0, pendientes: 0 };
+      g.acuses++; var k = estadoUiKey(r.estado);
+      if (k === 'entregado') g.entregas++; else if (k !== 'anulado' && k !== 'en_transito') g.pendientes++;
+      if (!g.zona && String(r.zona || '').trim()) g.zona = r.zona;
+      agg[r.repartidor_id] = g;
+    });
+    var list = Object.keys(agg).map(function (id) { var g = agg[id]; g.zona = g.zona || 'Sin zona'; g.eficiencia = g.acuses > 0 ? Math.round(g.entregas / g.acuses * 100) : 0; return g; })
+      .sort(function (a, b) { return b.acuses - a.acuses; });
+    var fetchAll = ['1', 'true', 'all'].indexOf(String(q.all || '').toLowerCase()) >= 0;
+    var limit = fetchAll ? list.length : Math.min(parseInt(q.limit, 10) || 7, 500);
+    var offset = fetchAll ? 0 : (parseInt(q.offset, 10) || 0);
+    return { items: list.slice(offset, offset + limit), total: list.length, limit: fetchAll ? list.length : limit, offset: offset };
+  }
+
   /* ── Router ─────────────────────────────────────────────────────────────── */
   async function route(method, rawPath, body) {
     var client = await sb();
@@ -319,14 +484,29 @@
     if (path === '/api/dashboard/resumen') return dashboardResumen(client);
     if (path === '/api/auditoria') return auditoria(client, query);
 
-    // dashboard interactivo (etapa 2) + print-log → stubs seguros
+    // dashboard interactivo
     if (path.indexOf('/api/dashboard/interactivo') === 0) {
-      if (/\/print$/.test(path) && method === 'POST') {
-        try { var pid = Number(seg[seg.length - 2]); if (pid) await client.from('acuse_log').insert({ acuse_id: pid, accion: 'IMPRIMIR', usuario: CFG.user, observacion: 'Impresion' }); } catch (_) {}
-        return { ok: true };
+      var sub = path.replace('/api/dashboard/interactivo', '');
+      if (sub === '/summary') return summaryFn(client, query);
+      if (sub === '/calendar') return calendarFn(client, query);
+      if (sub === '/repartidores') return repartidoresFn(client, query);
+      if (sub.indexOf('/panel/') === 0) return kpiListFn(client, sub.slice('/panel/'.length), query);
+      if (/^\/acuses\/\d+\/print$/.test(sub) && method === 'POST') {
+        var pid = Number(sub.split('/')[2]);
+        var usuario = (body && body.Usuario) || CFG.user;
+        var cur = await client.from('acuses').select('estado,activo').eq('id', pid).single();
+        if (!cur.data) throw httpError(404, 'Acuse no encontrado');
+        var k = estadoUiKey(cur.data.estado);
+        if (k === 'anulado' || Number(cur.data.activo) === 0) throw httpError(400, 'El acuse anulado no puede imprimirse');
+        var mueve = k !== 'entregado' && k !== 'en_transito';
+        if (mueve) {
+          await client.from('acuses').update({ estado: 'En Reparto' }).eq('id', pid);
+          await client.from('acuse_historial').insert({ acuse_id: pid, estado: 'En Reparto', usuario: usuario, observacion: 'Cambio automatico a en transito por impresion del acuse' });
+          await client.from('acuse_log').insert({ acuse_id: pid, accion: 'CAMBIO_ESTADO', usuario: usuario, observacion: 'Cambio automatico a en transito por impresion del acuse' });
+        }
+        await client.from('acuse_log').insert({ acuse_id: pid, accion: 'IMPRIMIR', usuario: usuario, observacion: (body && body.Observacion) || 'Impresion del acuse' });
+        return { ok: true, estado: mueve ? 'En Reparto' : cur.data.estado, actualizoEstado: mueve };
       }
-      if (/\/summary$/.test(path)) return { summary: {}, kpis: {}, cards: [] };
-      if (/\/calendar$/.test(path)) return { items: [], dias: [] };
       return { items: [] };
     }
 
