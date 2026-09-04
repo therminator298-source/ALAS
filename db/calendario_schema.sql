@@ -16,14 +16,18 @@ create table if not exists tareas (
   fecha       date not null,
   hora        time,
   responsable text,
+  deposito    text,                     -- Depósito Central · Fábrica · Depósito Luque Sanber
   prioridad   text not null default 'NORMAL',
   estado      text not null default 'Pendiente',
   usuario     text,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-create index if not exists idx_tareas_fecha  on tareas (fecha);
-create index if not exists idx_tareas_estado on tareas (estado);
+-- Por si la tabla ya existía sin la columna:
+alter table tareas add column if not exists deposito text;
+create index if not exists idx_tareas_fecha    on tareas (fecha);
+create index if not exists idx_tareas_estado   on tareas (estado);
+create index if not exists idx_tareas_deposito on tareas (deposito);
 
 -- Mantener updated_at
 create or replace function tareas_touch()
