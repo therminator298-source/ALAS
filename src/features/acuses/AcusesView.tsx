@@ -46,18 +46,11 @@ export function AcusesView() {
     iframeRef.current?.contentWindow?.postMessage({ source: 'alas-parent', action: 'nav', view: v }, window.location.origin);
   }
 
-  const activeLabel = TABS.find((t) => t.v === active)?.label ?? 'Acuses';
-
   return (
     <div className="flex flex-col h-full">
-      {/* Header del módulo Acuses */}
-      <div className="shrink-0 border-b border-border bg-surface px-4 md:px-6 pt-3">
-        <div className="flex items-center gap-2 mb-2">
-          <ClipboardCheck className="h-5 w-5 text-brand" strokeWidth={2} />
-          <h1 className="text-lg font-extrabold text-ink">{activeLabel}</h1>
-          <span className="text-2xs font-bold uppercase tracking-wide text-ink-3 ml-1">· Acuses</span>
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto -mb-px">
+      {/* Header del módulo Acuses — tabs centrados, botones azules PRO */}
+      <div className="shrink-0 border-b border-border bg-surface px-4 md:px-6 py-3">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           {TABS.map((t) => {
             const Icon = t.icon;
             const on = active === t.v;
@@ -66,11 +59,13 @@ export function AcusesView() {
                 key={t.v}
                 onClick={() => go(t.v)}
                 className={cn(
-                  'inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold border-b-2 transition-colors',
-                  on ? 'border-brand text-brand' : 'border-transparent text-ink-3 hover:text-ink-2',
+                  'inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 active:scale-[0.97]',
+                  on
+                    ? 'bg-brand text-white shadow-pop'
+                    : 'bg-surface-2 text-ink-2 border border-border hover:border-brand/40 hover:text-brand hover:-translate-y-px',
                 )}
               >
-                <Icon className="h-4 w-4" strokeWidth={2} />
+                <Icon className="h-4 w-4" strokeWidth={2.2} />
                 {t.label}
               </button>
             );
