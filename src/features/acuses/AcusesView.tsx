@@ -2,8 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import {
   BarChart3, ClipboardCheck, CalendarDays, Users, Clock, type LucideIcon,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useSession } from '@/store/session';
+import { SegStrip } from '@/components/SegStrip';
 
 // Proyecto Supabase de Acuses. La anon key es pública por diseño (RLS anon, gate = SSO).
 const ACUSE_SB_URL = 'https://fdcumrdbnrjpbfbrxqiw.supabase.co';
@@ -54,26 +54,12 @@ export function AcusesView() {
           <ClipboardCheck className="h-5 w-5 text-brand" strokeWidth={2.2} />
           <span className="hidden sm:block text-base font-extrabold text-ink">Gestión de Acuses</span>
         </div>
-        <div className="flex items-center justify-center gap-2 flex-wrap">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const on = active === t.v;
-            return (
-              <button
-                key={t.v}
-                onClick={() => go(t.v)}
-                className={cn(
-                  'inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 active:scale-[0.97]',
-                  on
-                    ? 'bg-brand text-white shadow-pop'
-                    : 'bg-surface-2 text-ink-2 border border-border hover:border-brand/40 hover:text-brand hover:-translate-y-px',
-                )}
-              >
-                <Icon className="h-4 w-4" strokeWidth={2.2} />
-                {t.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-center overflow-x-auto">
+          <SegStrip
+            items={TABS.map((t) => ({ value: t.v, label: t.label, icon: t.icon }))}
+            value={active}
+            onChange={go}
+          />
         </div>
       </div>
 

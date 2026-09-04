@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Clock, X, ListTodo } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SegStrip } from '@/components/SegStrip';
 import { listTareas } from './calendarioApi';
 import { TareaFormModal } from './TareaFormModal';
 import { estadoKey, DEPOSITOS, type Tarea } from './types';
+
+const DEP_ICON: Record<string, LucideIcon> = {
+  'Depósito Central': Warehouse,
+  'Fábrica': Factory,
+  'Depósito Luque Sanber': Building2,
+};
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -47,32 +54,42 @@ export function CalendarioView() {
   useEffect(() => {
     if (cells.length === 0) return;
     let alive = true;
-    listTareas(isoOf(cells[0]!), isoOf(cells[cells.length - 1]!), deposito).then((res) => {
+    // Traemos todas las tareas del mes (todos los depósitos) para poder contar
+    // por depósito en los botones; el filtro se aplica en el cliente.
+    listTareas(isoOf(cells[0]!), isoOf(cells[cells.length - 1]!)).then((res) => {
       if (!alive) return; setTareas(res.rows); setLive(res.live);
     });
     return () => { alive = false; };
-  }, [cells, deposito, reloadKey]);
+  }, [cells, reloadKey]);
 
   useEffect(() => { setSelectedDay(null); }, [cursor, deposito]);
 
+  const depTareas = useMemo(() => tareas.filter((t) => t.deposito === deposito), [tareas, deposito]);
+  const depCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    DEPOSITOS.forEach((d) => { c[d] = 0; });
+    tareas.forEach((t) => { const d = t.deposito; if (d && d in c) c[d] = (c[d] ?? 0) + 1; });
+    return c;
+  }, [tareas]);
+
   const byDate = useMemo(() => {
     const m = new Map<string, Tarea[]>();
-    tareas.forEach((t) => { const a = m.get(t.fecha) ?? []; a.push(t); m.set(t.fecha, a); });
+    depTareas.forEach((t) => { const a = m.get(t.fecha) ?? []; a.push(t); m.set(t.fecha, a); });
     return m;
-  }, [tareas]);
+  }, [depTareas]);
 
   const tISO = todayISO();
   const listTasks = useMemo(() => {
-    const rows = selectedDay ? tareas.filter((t) => t.fecha === selectedDay) : [...tareas];
+    const rows = selectedDay ? depTareas.filter((t) => t.fecha === selectedDay) : [...depTareas];
     return rows.sort((a, b) => (a.fecha === b.fecha ? (a.hora ?? '99').localeCompare(b.hora ?? '99') : a.fecha.localeCompare(b.fecha)));
-  }, [tareas, selectedDay]);
+  }, [depTareas, selectedDay]);
 
   // GSAP: entrada de barras/tarjetas al montar
   useEffect(() => {
     if (!rootRef.current) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      gsap.from('.dep-btn', { opacity: 0, y: -8, duration: 0.4, stagger: 0.06, ease: 'back.out(1.6)', clearProps: 'all' });
+      gsap.from('.dep-seg', { opacity: 0, y: -8, duration: 0.45, ease: 'back.out(1.6)', clearProps: 'all' });
       gsap.from('.cal-panel', { opacity: 0, y: 16, duration: 0.5, stagger: 0.1, ease: 'power3.out', clearProps: 'all', delay: 0.05 });
     }, rootRef.current);
     return () => ctx.revert();
@@ -113,17 +130,12 @@ export function CalendarioView() {
             <p className="text-2xs font-semibold text-ink-3">Planificación por depósito</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 ml-1">
-          {DEPOSITOS.map((d) => {
-            const on = deposito === d;
-            return (
-              <button key={d} onClick={() => setDeposito(d)}
-                className={cn('dep-btn inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-bold transition-all duration-200 active:scale-[0.97]',
-                  on ? 'bg-brand text-white shadow-pop' : 'bg-surface-2 text-ink-2 border border-border hover:border-brand/40 hover:text-brand hover:-translate-y-px')}>
-                <Warehouse className="h-4 w-4" strokeWidth={2.2} /> {d}
-              </button>
-            );
-          })}
+        <div className="dep-seg ml-1 overflow-x-auto">
+          <SegStrip
+            items={DEPOSITOS.map((d) => ({ value: d, label: d, icon: DEP_ICON[d] ?? Warehouse, count: depCounts[d] ?? 0 }))}
+            value={deposito}
+            onChange={setDeposito}
+          />
         </div>
         <button className="btn-primary ml-auto" onClick={() => openNew(selectedDay ?? tISO)}>
           <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
