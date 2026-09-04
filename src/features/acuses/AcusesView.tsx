@@ -5,6 +5,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useSession } from '@/store/session';
 
+// Proyecto Supabase de Acuses. La anon key es pública por diseño (RLS anon, gate = SSO).
+const ACUSE_SB_URL = 'https://fdcumrdbnrjpbfbrxqiw.supabase.co';
+const ACUSE_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkY3VtcmRibnJqcGJmYnJ4cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTU1NjAsImV4cCI6MjA5OTYzMTU2MH0.YHsYBm-pnzu53BiZFikQef4CEYDzxGoToL_J4iH1wgY';
+
 interface Tab { v: string; label: string; icon: LucideIcon }
 const TABS: Tab[] = [
   { v: 'resumen', label: 'Dashboard Resumen', icon: BarChart3 },
@@ -25,8 +29,10 @@ export function AcusesView() {
   const [active, setActive] = useState('acuses');
 
   const src = useMemo(() => {
-    const url = import.meta.env.VITE_ACUSE_SUPABASE_URL as string | undefined;
-    const key = import.meta.env.VITE_ACUSE_SUPABASE_ANON_KEY as string | undefined;
+    // Default = proyecto Supabase de Acuses (anon key pública por diseño; RLS anon).
+    // Las env vars de Vercel, si están, tienen prioridad.
+    const url = (import.meta.env.VITE_ACUSE_SUPABASE_URL as string | undefined) || ACUSE_SB_URL;
+    const key = (import.meta.env.VITE_ACUSE_SUPABASE_ANON_KEY as string | undefined) || ACUSE_SB_KEY;
     const p = new URLSearchParams();
     p.set('embed', '1');
     if (url) p.set('sb', url);
