@@ -12,7 +12,7 @@ const ACUSE_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 interface Tab { v: string; label: string; icon: LucideIcon }
 const TABS: Tab[] = [
   { v: 'resumen', label: 'Dashboard Resumen', icon: BarChart3 },
-  { v: 'acuses', label: 'Gestión de Acuses', icon: ClipboardCheck },
+  { v: 'acuses', label: 'Acuses', icon: ClipboardCheck },
   { v: 'calendario', label: 'Calendario', icon: CalendarDays },
   { v: 'repartidores', label: 'Repartidores', icon: Users },
   { v: 'historial', label: 'Historial', icon: Clock },
@@ -52,7 +52,7 @@ export function AcusesView() {
       <div className="relative shrink-0 border-b border-border bg-surface px-4 md:px-6 py-3">
         <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5 text-brand" strokeWidth={2.2} />
-          <span className="hidden sm:block text-base font-extrabold text-ink">Acuses</span>
+          <span className="hidden sm:block text-base font-extrabold text-ink">Gestión de Acuses</span>
         </div>
         <div className="flex items-center justify-center gap-2 flex-wrap">
           {TABS.map((t) => {
