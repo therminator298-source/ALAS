@@ -65,13 +65,35 @@
   inset: 0 auto 0 0;
   width: 64px;
   overflow: hidden;
-  transition: width 380ms var(--model-ease);
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* Se aísla en su propia capa de composición para que el expand no dispare
+     reflow/repaint del resto (evita el tironeo al hacer hover). */
+  will-change: width;
+  contain: layout paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   background: linear-gradient(180deg, #0e6fa8 0%, #0b5f8d 55%, #084f78 100%);
   display: flex;
   align-items: stretch;
   padding: 20px 10px;
   z-index: 20;
   box-shadow: 3px 0 10px rgb(0 0 0 / 12%), inset -1px 0 0 rgb(255 255 255 / 6%);
+}
+
+/* Spinner de arranque (hold limpio mientras resuelve la sesión) */
+.alas-boot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgb(11 95 141 / 15%);
+  border-top-color: var(--model-primary);
+  animation: alas-boot-spin 0.7s linear infinite;
+}
+@keyframes alas-boot-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alas-boot { animation-duration: 1.5s; }
 }
 
 .sidebar-wave:hover {

@@ -3,7 +3,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   LayoutGrid,
-  LogOut,
   UserCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -22,7 +21,6 @@ interface SidebarItem {
 interface SidebarProps {
   user: User;
   sessionSource: SessionSource;
-  onLogout: () => void;
   onReturnToLauncher: () => void;
 }
 
@@ -35,7 +33,7 @@ function sourceLabel(source: SessionSource): string {
   return source === 'launcher' ? 'Launcher ALAS' : 'Modo demo';
 }
 
-export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher }: SidebarProps) {
+export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProps) {
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
@@ -73,11 +71,6 @@ export function Sidebar({ user, sessionSource, onLogout, onReturnToLauncher }: S
         <button type="button" onClick={onReturnToLauncher} className="sidebar-icon" aria-label="Volver al launcher">
           <LayoutGrid aria-hidden="true" />
           <span className="tooltip">Volver a Menu</span>
-        </button>
-
-        <button type="button" onClick={onLogout} className="sidebar-icon" aria-label="Cerrar sesion">
-          <LogOut aria-hidden="true" />
-          <span className="tooltip">Cerrar sesion</span>
         </button>
       </div>
     </nav>
