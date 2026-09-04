@@ -78,7 +78,7 @@ export function AcusesView() {
         ref={iframeRef}
         src={src}
         title="Acuses"
-        className="flex-1 w-full border-0 block"
+        className="flex-1 w-full border-0 block bg-white"
         allow="clipboard-write"
       />
     </div>
