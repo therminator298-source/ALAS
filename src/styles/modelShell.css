@@ -65,13 +65,10 @@
   inset: 0 auto 0 0;
   width: 64px;
   overflow: hidden;
-  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
-  /* Se aísla en su propia capa de composición para que el expand no dispare
-     reflow/repaint del resto (evita el tironeo al hacer hover). */
-  will-change: width;
-  contain: layout paint;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  /* Mismo patrón que CajaVenta: transición simple de width (280ms, expo.out).
+     Nada de contain/translateZ/will-change: eso recortaba la sombra y volvía
+     rara la animación. */
+  transition: width 280ms var(--model-ease);
   background: linear-gradient(180deg, #0e6fa8 0%, #0b5f8d 55%, #084f78 100%);
   display: flex;
   align-items: stretch;
@@ -425,18 +422,6 @@
 
 .alas-modal--lg {
   width: min(980px, calc(100vw - 28px));
-}
-
-.alas-modal::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, #0066cc 0%, #003d7a 100%);
-  pointer-events: none;
-  z-index: 2;
 }
 
 .alas-modal__header {
