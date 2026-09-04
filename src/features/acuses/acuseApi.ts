@@ -1,9 +1,17 @@
 import { supabaseAcuse, isAcuseReady } from '@/lib/supabaseAcuse';
 import type {
-  AcuseRow, AcuseDashboard, AcuseFilters, AcuseSummary,
+  AcuseRow, AcuseDashboard, AcuseFilters, AcuseSummary, AcuseFull, AcuseHistorial,
   Repartidor, ClienteCat, ArticuloCat, AcuseDetalle,
 } from './types';
 import { estadoKey } from './types';
+
+export interface NewAcuseInput {
+  cod_cliente: string; cliente_nombre?: string | null; cliente_ruc?: string | null;
+  cliente_direccion?: string | null; cliente_ciudad?: string | null; cliente_telefono?: string | null;
+  zona?: string | null; estado: string; fecha_emision: string; fecha_entrega?: string | null;
+  repartidor_id: number | null; repartidor_nombre?: string | null; observacion?: string | null;
+  usuario?: string | null; detalles: AcuseDetalle[];
+}
 
 const PAGE = 25;
 
@@ -167,8 +175,24 @@ export async function listRepartidores(): Promise<Repartidor[]> {
   return (data ?? []) as Repartidor[];
 }
 
+const MOCK_CLIENTES: ClienteCat[] = [
+  { cod_cliente: 'C1001', nombre: 'ATLANTIC S.A.E.', ruc: '80012345-6', direccion: 'Av. Artigas 1200', ciudad: 'Asunción', zona: 'Central', telefono: '021 555 100' },
+  { cod_cliente: 'C1002', nombre: 'ZR DISTRIBUIDORA', ruc: '80023456-7', direccion: 'Ruta 2 km 18', ciudad: 'San Lorenzo', zona: 'Central', telefono: '021 555 200' },
+  { cod_cliente: 'C1003', nombre: 'FORTLEV INDUSTRIA', ruc: '80034567-8', direccion: 'Parque Industrial', ciudad: 'Luque', zona: 'Central', telefono: '021 555 300' },
+  { cod_cliente: 'C1004', nombre: 'ORION S.R.L.', ruc: '80045678-9', direccion: 'Calle Última 456', ciudad: 'Capiatá', zona: 'Interior', telefono: '0228 555 400' },
+];
+const MOCK_ARTICULOS: ArticuloCat[] = [
+  { material: '100023', descripcion: 'Caño PVC 100mm', um: 'UN', status: 'Activo' },
+  { material: '100048', descripcion: 'Codo PVC 90°', um: 'UN', status: 'Activo' },
+  { material: '100112', descripcion: 'Cemento bolsa 50kg', um: 'BOL', status: 'Activo' },
+  { material: '100205', descripcion: 'Hierro 8mm x 12m', um: 'UN', status: 'Activo' },
+];
+
 export async function searchClientes(term: string): Promise<ClienteCat[]> {
-  if (!isAcuseReady || !supabaseAcuse) return [];
+  const t0 = term.trim().toLowerCase();
+  if (!isAcuseReady || !supabaseAcuse) {
+    return MOCK_CLIENTES.filter((c) => !t0 || `${c.cod_cliente} ${c.nombre}`.toLowerCase().includes(t0));
+  }
   const t = term.trim();
   let q = supabaseAcuse.from('clientes').select('cod_cliente,nombre,ruc,direccion,ciudad,zona,telefono').limit(20);
   if (t) q = q.or(`cod_cliente.ilike.%${t}%,nombre.ilike.%${t}%`);
@@ -178,7 +202,10 @@ export async function searchClientes(term: string): Promise<ClienteCat[]> {
 }
 
 export async function searchArticulos(term: string): Promise<ArticuloCat[]> {
-  if (!isAcuseReady || !supabaseAcuse) return [];
+  const t0 = term.trim().toLowerCase();
+  if (!isAcuseReady || !supabaseAcuse) {
+    return MOCK_ARTICULOS.filter((a) => !t0 || `${a.material} ${a.descripcion}`.toLowerCase().includes(t0));
+  }
   const t = term.trim();
   let q = supabaseAcuse.from('articulos').select('material,descripcion,um,status').limit(20);
   if (t) q = q.or(`material.ilike.%${t}%,descripcion.ilike.%${t}%`);
@@ -187,16 +214,57 @@ export async function searchArticulos(term: string): Promise<ArticuloCat[]> {
   return (data ?? []) as ArticuloCat[];
 }
 
-/* ─────────────────────────── Escrituras ─────────────────────────── */
-interface NewAcuse {
-  cod_cliente: string; cliente_nombre?: string | null; cliente_ruc?: string | null;
-  cliente_direccion?: string | null; cliente_ciudad?: string | null; cliente_telefono?: string | null;
-  zona?: string | null; estado: string; fecha_emision: string; fecha_entrega?: string | null;
-  repartidor_id: number | null; repartidor_nombre?: string | null; observacion?: string | null;
-  usuario?: string | null; detalles: AcuseDetalle[];
+/* ─────────────────────────── Detalle / edición ─────────────────────────── */
+export async function getAcuse(id: number): Promise<AcuseFull | null> {
+  if (!isAcuseReady || !supabaseAcuse) {
+    const base = mockAcuses().find((a) => a.id === id);
+    if (!base) return null;
+    return {
+      ...base,
+      cliente_ruc: '80012345-6', cliente_direccion: 'Av. Ejemplo 123', cliente_telefono: '021 555 000',
+      detalles: [
+        { id: 1, cod_mercaderia: '100023', descripcion: 'Artículo demo A', cantidad: 10, um: 'UN', nota: null },
+        { id: 2, cod_mercaderia: '100048', descripcion: 'Artículo demo B', cantidad: 5, um: 'CJ', nota: 'Frágil' },
+      ],
+      historial: [{ id: 1, estado: base.estado, usuario: base.usuario, observacion: 'Creación del acuse', created_at: base.created_at }],
+    };
+  }
+  const { data, error } = await supabaseAcuse.from('acuses').select('*').eq('id', id).single();
+  if (error || !data) { console.error('[acuses] getAcuse', error); return null; }
+  const rec = data as Record<string, unknown>;
+  const [detRes, histRes] = await Promise.all([
+    supabaseAcuse.from('acuse_detalle').select('id,cod_mercaderia,descripcion,cantidad,um,nota').eq('acuse_id', id).order('id'),
+    supabaseAcuse.from('acuse_historial').select('id,estado,usuario,observacion,created_at').eq('acuse_id', id).order('created_at', { ascending: false }),
+  ]);
+  const detalles = (detRes.data ?? []) as AcuseDetalle[];
+  return {
+    id: Number(rec.id),
+    nro_acuse: String(rec.nro_acuse ?? ''),
+    cod_cliente: (rec.cod_cliente as string) ?? null,
+    cliente_nombre: (rec.cliente_nombre as string) ?? null,
+    cliente_ciudad: (rec.cliente_ciudad as string) ?? null,
+    cliente_ruc: (rec.cliente_ruc as string) ?? null,
+    cliente_direccion: (rec.cliente_direccion as string) ?? null,
+    cliente_telefono: (rec.cliente_telefono as string) ?? null,
+    zona: (rec.zona as string) ?? null,
+    estado: String(rec.estado ?? 'Pendiente'),
+    fecha_emision: String(rec.fecha_emision ?? ''),
+    fecha_entrega: (rec.fecha_entrega as string) ?? null,
+    repartidor_id: rec.repartidor_id != null ? Number(rec.repartidor_id) : null,
+    repartidor_nombre: (rec.repartidor_nombre as string) ?? null,
+    observacion: (rec.observacion as string) ?? null,
+    usuario: (rec.usuario as string) ?? null,
+    activo: Boolean(rec.activo),
+    created_at: String(rec.created_at ?? ''),
+    items: detalles.length,
+    unidades: detalles.reduce((a, d) => a + (Number(d.cantidad) || 0), 0),
+    detalles,
+    historial: (histRes.data ?? []) as AcuseHistorial[],
+  };
 }
 
-export async function createAcuse(input: NewAcuse): Promise<{ id: number; nro_acuse: string }> {
+/* ─────────────────────────── Escrituras ─────────────────────────── */
+export async function createAcuse(input: NewAcuseInput): Promise<{ id: number; nro_acuse: string }> {
   if (!supabaseAcuse) throw new Error('Sin conexión con la base de Acuses');
   const { detalles, ...head } = input;
   const { data, error } = await supabaseAcuse.from('acuses').insert({ ...head, activo: true }).select('id,nro_acuse').single();
@@ -228,4 +296,58 @@ export async function anularAcuse(id: number, usuario: string | null, observacio
   if (error) throw error;
   await supabaseAcuse.from('acuse_historial').insert({ acuse_id: id, estado: 'Anulado', usuario, observacion });
   await supabaseAcuse.from('acuse_log').insert({ acuse_id: id, accion: 'ANULAR', usuario, observacion });
+}
+
+export async function updateAcuse(id: number, input: NewAcuseInput): Promise<void> {
+  if (!supabaseAcuse) throw new Error('Sin conexión con la base de Acuses');
+  const { detalles, ...head } = input;
+  const { error } = await supabaseAcuse.from('acuses').update(head).eq('id', id);
+  if (error) throw error;
+  await supabaseAcuse.from('acuse_detalle').delete().eq('acuse_id', id);
+  if (detalles.length) {
+    const rows = detalles.map((d) => ({ acuse_id: id, cod_mercaderia: d.cod_mercaderia, descripcion: d.descripcion, cantidad: d.cantidad, um: d.um, nota: d.nota }));
+    const { error: e2 } = await supabaseAcuse.from('acuse_detalle').insert(rows);
+    if (e2) throw e2;
+  }
+  await supabaseAcuse.from('acuse_historial').insert({ acuse_id: id, estado: input.estado, usuario: input.usuario ?? null, observacion: 'Edición del acuse' });
+  await supabaseAcuse.from('acuse_log').insert({ acuse_id: id, accion: 'EDITAR', usuario: input.usuario ?? null, observacion: 'Acuse actualizado desde el módulo' });
+}
+
+/* ─────────────────────────── Export CSV ─────────────────────────── */
+export async function downloadAcusesCsv(filters: AcuseFilters = {}): Promise<number> {
+  let rows: AcuseRow[];
+  if (!isAcuseReady || !supabaseAcuse) {
+    rows = mockAcuses();
+  } else {
+    let q = supabaseAcuse
+      .from('acuses')
+      .select('nro_acuse,cod_cliente,cliente_nombre,cliente_ciudad,zona,estado,fecha_emision,fecha_entrega,repartidor_nombre,usuario')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (filters.estado && filters.estado !== 'all') q = q.eq('estado', filters.estado);
+    if (filters.search) q = q.or(`nro_acuse.ilike.%${filters.search}%,cliente_nombre.ilike.%${filters.search}%,repartidor_nombre.ilike.%${filters.search}%`);
+    const { data, error } = await q;
+    if (error) throw error;
+    rows = (data ?? []) as unknown as AcuseRow[];
+  }
+
+  const headers = ['N° Acuse', 'Cód. Cliente', 'Cliente', 'Ciudad', 'Zona', 'Estado', 'Emisión', 'Entrega', 'Repartidor', 'Usuario'];
+  const esc = (v: unknown) => {
+    const s = String(v ?? '');
+    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(';')];
+  rows.forEach((r) => lines.push([
+    r.nro_acuse, r.cod_cliente, r.cliente_nombre, r.cliente_ciudad, r.zona,
+    r.estado, r.fecha_emision, r.fecha_entrega, r.repartidor_nombre, r.usuario,
+  ].map(esc).join(';')));
+
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `acuses_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return rows.length;
 }

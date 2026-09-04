@@ -91,3 +91,19 @@ export interface AcuseFilters {
   fechaDesde?: string;
   fechaHasta?: string;
 }
+
+export interface AcuseHistorial {
+  id: number;
+  estado: string;
+  usuario: string | null;
+  observacion: string | null;
+  created_at: string;
+}
+
+export interface AcuseFull extends AcuseRow {
+  cliente_ruc: string | null;
+  cliente_direccion: string | null;
+  cliente_telefono: string | null;
+  detalles: AcuseDetalle[];
+  historial: AcuseHistorial[];
+}
