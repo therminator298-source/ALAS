@@ -1,7 +1,8 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
+  CalendarDays,
   ClipboardList,
-  LayoutDashboard,
+  FileText,
   LayoutGrid,
   UserCircle,
   type LucideIcon,
@@ -15,7 +16,8 @@ interface SidebarItem {
   label: string;
   to: string;
   icon: LucideIcon;
-  end?: boolean;
+  /** Prefijos de ruta que mantienen activo el apartado. */
+  match: string[];
 }
 
 interface SidebarProps {
@@ -25,8 +27,14 @@ interface SidebarProps {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
-  { label: 'Incidencias', to: '/incidents', icon: ClipboardList, end: true },
+  {
+    label: 'Incidencias de recepción',
+    to: '/dashboard',
+    icon: ClipboardList,
+    match: ['/dashboard', '/incidents', '/reports', '/suppliers', '/products', '/audit'],
+  },
+  { label: 'Acuses', to: '/acuses', icon: FileText, match: ['/acuses'] },
+  { label: 'Calendario tareas', to: '/calendario', icon: CalendarDays, match: ['/calendario'] },
 ];
 
 function sourceLabel(source: SessionSource): string {
@@ -34,22 +42,24 @@ function sourceLabel(source: SessionSource): string {
 }
 
 export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProps) {
+  const { pathname } = useLocation();
+
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
-        <NavLink to="/dashboard" className="sidebar-brand" aria-label="Ir al dashboard">
+        <NavLink to="/dashboard" className="sidebar-brand" aria-label="Ir al inicio">
           <img src="/logo-icon.png" alt="" className="sidebar-brand__icon" />
           <img src="/logo-alas-blanco.png" alt="ALAS" className="sidebar-brand__wordmark" />
         </NavLink>
 
         {SIDEBAR_ITEMS.map((item) => {
           const Icon = item.icon;
+          const active = item.match.some((p) => pathname === p || pathname.startsWith(p + '/'));
           return (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
-              className={({ isActive }) => cn('sidebar-icon', isActive && 'active')}
+              className={cn('sidebar-icon', active && 'active')}
               aria-label={item.label}
               title={item.label}
             >

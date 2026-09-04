@@ -37,6 +37,10 @@ export default function App() {
           <Route path="/audit" element={<Audit />} />
           <Route path="/settings" element={<Placeholder title="Configuración" phase="Fase 12" />} />
 
+          {/* Apartados nuevos (se construyen por fase, cada uno con su Supabase) */}
+          <Route path="/acuses" element={<Placeholder title="Acuses" phase="próxima fase — módulo Acuses con Supabase nuevo" />} />
+          <Route path="/calendario" element={<Placeholder title="Calendario de tareas" phase="próxima fase — módulo PRO con Supabase nuevo" />} />
+
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>
       </Routes>
