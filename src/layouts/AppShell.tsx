@@ -10,7 +10,7 @@ import { ToastHost } from '@/components/ui/toast';
 import { useSession } from '@/store/session';
 
 export function AppShell() {
-  const { user, loading, source, error, requireSso, signOut, goToLauncher } = useSession();
+  const { user, loading, source, error, requireSso, goToLauncher } = useSession();
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
@@ -50,7 +50,6 @@ export function AppShell() {
         <Sidebar
           user={user}
           sessionSource={source}
-          onLogout={signOut}
           onReturnToLauncher={goToLauncher}
         />
         <section className="alas-model-stage">
@@ -67,20 +66,16 @@ export function AppShell() {
   );
 }
 
+/**
+ * Hold de arranque: mantiene el mismo fondo/shell que la app y solo muestra
+ * un spinner sutil (sin texto). Así la entrada es limpia y la transición al
+ * contenido es imperceptible (no hay cartel de "validando acceso").
+ */
 function SessionLoading() {
   return (
     <div className="alas-model-layout">
       <div className="alas-model-shell grid place-items-center">
-        <div className="alas-session-panel flex flex-col items-center gap-4">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-brand text-white shadow-pop">
-            <img src="/icon-192.png" alt="ALAS" className="h-12 w-12 rounded-xl object-contain" />
-          </div>
-          <div>
-            <p className="text-sm font-extrabold uppercase tracking-wide text-brand">ALAS</p>
-            <h1 className="text-xl font-extrabold text-ink">Validando acceso</h1>
-            <p className="mt-1 text-sm font-medium text-ink-2">Conectando calendario con el launcher.</p>
-          </div>
-        </div>
+        <span className="alas-boot" aria-label="Cargando" role="status" />
       </div>
     </div>
   );
