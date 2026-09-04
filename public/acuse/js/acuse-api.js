@@ -31,7 +31,15 @@
         actúa de switcher de módulos; este módulo pone su nav arriba. ── */
   if (P.get('embed') === '1') {
     var _st = document.createElement('style');
-    _st.textContent = '.sidebar-wave{display:none!important}.canvas-wrapper{margin-left:0!important}.canvas{padding-top:14px!important}';
+    _st.textContent = [
+      '.sidebar-wave{display:none!important}',
+      // Sin doble fondo: el ACUSE se apoya directo sobre el blanco del shell.
+      'html,body{background:transparent!important}',
+      '.layout{background:transparent!important;padding:0!important;min-height:0!important}',
+      '.dashboard-card{background:transparent!important;box-shadow:none!important;border-radius:0!important;height:100vh!important;max-height:100vh!important}',
+      '.canvas-wrapper{margin-left:0!important;background:transparent!important}',
+      '.canvas{padding-top:14px!important}'
+    ].join('');
     (document.head || document.documentElement).appendChild(_st);
     window.addEventListener('message', function (ev) {
       var d = ev.data; if (!d || d.source !== 'alas-parent' || d.action !== 'nav') return;
