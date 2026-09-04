@@ -53,7 +53,7 @@ export function AppShell() {
           onReturnToLauncher={goToLauncher}
         />
         <section className="alas-model-stage">
-          {!location.pathname.startsWith('/acuses') && <Topbar notifCount={0} />}
+          {!(location.pathname.startsWith('/acuses') || location.pathname.startsWith('/calendario')) && <Topbar notifCount={0} />}
           <main ref={mainRef} className="alas-model-content pb-16 md:pb-0">
             <Outlet />
           </main>
