@@ -26,6 +26,26 @@
   };
   try { sessionStorage.setItem('acuse.cfg', JSON.stringify(CFG)); } catch (_) {}
 
+  /* ── Modo embed: oculta el sidebar propio del ACUSE y deja que el apartado
+        (React) controle la navegación por postMessage. El main sidebar del shell
+        actúa de switcher de módulos; este módulo pone su nav arriba. ── */
+  if (P.get('embed') === '1') {
+    var _st = document.createElement('style');
+    _st.textContent = '.sidebar-wave{display:none!important}.canvas-wrapper{margin-left:0!important}.canvas{padding-top:14px!important}';
+    (document.head || document.documentElement).appendChild(_st);
+    window.addEventListener('message', function (ev) {
+      var d = ev.data; if (!d || d.source !== 'alas-parent' || d.action !== 'nav') return;
+      var v = d.view, tries = 0;
+      (function go() {
+        var done = false;
+        if (v === 'acuses' && window.showDashboardPanel) { window.showDashboardPanel('acuses'); done = true; }
+        else if (v === 'repartidores' && window.showDashboardPanel) { window.showDashboardPanel('repartidores'); done = true; }
+        else if ((v === 'resumen' || v === 'calendario' || v === 'historial') && window.showView) { window.showView(v); done = true; }
+        if (!done && tries++ < 25) setTimeout(go, 150);
+      })();
+    });
+  }
+
   var _clientPromise = null;
   function loadSupabase() {
     return new Promise(function (res, rej) {
