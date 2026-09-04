@@ -138,16 +138,17 @@
 .sidebar-brand {
   position: relative;
   color: #fff;
-  min-height: 48px;
+  min-height: 52px;
   margin-bottom: 8px;
+  padding: 0;               /* sin padding lateral: el triángulo se centra en el rail */
+  justify-content: center;
 }
 
-/* Colapsado: se ve el ícono cuadrado. Expandido: se cambia por el wordmark. */
+/* Colapsado: triángulo △ centrado y grande. Expandido: se cambia por el wordmark. */
 .sidebar-brand__icon {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
-  border-radius: 9px;
   object-fit: contain;
   transition: opacity 160ms var(--model-ease);
 }
