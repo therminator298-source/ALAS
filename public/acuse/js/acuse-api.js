@@ -74,6 +74,22 @@
     return _clientPromise;
   }
 
+  /* ── Caché en memoria (TTL corto) ───────────────────────────────────────────
+        Evita refetch de catálogos estables (repartidores) en cada vista/acción.
+        Se invalida al mutar. Vive lo que dura la pestaña del iframe. ── */
+  var _cache = {};
+  function cacheGet(k, ttl) { var e = _cache[k]; return (e && (Date.now() - e.t) < ttl) ? e.v : null; }
+  function cacheSet(k, v) { _cache[k] = { t: Date.now(), v: v }; return v; }
+  function cacheClear(k) { if (k) delete _cache[k]; else _cache = {}; }
+
+  // Repartidores: cambian poco → cache 60s, compartido por todas las vistas.
+  async function getReps(client) {
+    var c = cacheGet('reps', 60000); if (c) return c;
+    var r = await client.from('repartidores').select('id,codigo,nombre,activo').order('nombre');
+    return cacheSet('reps', r.data || []);
+  }
+  async function repCount(client) { return (await getReps(client)).filter(function (x) { return x.activo; }).length; }
+
   /* ── Utilidades ─────────────────────────────────────────────────────────── */
   function httpError(status, message) { var e = new Error(message || ('Error HTTP ' + status)); e.status = status; return e; }
   function noConfig() { return httpError(503, 'Configurá el Supabase de Acuses (VITE_ACUSE_SUPABASE_*).'); }
@@ -118,9 +134,13 @@
   async function getAcuseFull(client, id) {
     var r = await client.from('acuses').select('*').eq('id', id).single();
     if (r.error || !r.data) throw httpError(404, 'Acuse no encontrado');
-    var det = await client.from('acuse_detalle').select('*').eq('acuse_id', id).order('id');
-    var hist = await client.from('acuse_historial').select('*').eq('acuse_id', id).order('created_at', { ascending: false });
-    var log = await client.from('acuse_log').select('*').eq('acuse_id', id).order('created_at', { ascending: false });
+    // detalle/historial/log son independientes → en paralelo (1 RTT en vez de 3).
+    var parts = await Promise.all([
+      client.from('acuse_detalle').select('*').eq('acuse_id', id).order('id'),
+      client.from('acuse_historial').select('*').eq('acuse_id', id).order('created_at', { ascending: false }),
+      client.from('acuse_log').select('*').eq('acuse_id', id).order('created_at', { ascending: false })
+    ]);
+    var det = parts[0], hist = parts[1], log = parts[2];
     var out = headOut(r.data, det.data || []);
     out.detalles = (det.data || []).map(detOut);
     out.historial = (hist.data || []).map(function (h) { return { ID: h.id, ID_Acuse: h.acuse_id, Estado: h.estado, Fecha: h.created_at, Usuario: h.usuario, Observacion: h.observacion }; });
@@ -139,8 +159,8 @@
   }
   async function repNombre(client, id) {
     if (!id) return null;
-    var r = await client.from('repartidores').select('nombre,codigo').eq('id', id).single();
-    return r.data || null;
+    var rep = (await getReps(client)).find(function (x) { return String(x.id) === String(id); });
+    return rep ? { nombre: rep.nombre, codigo: rep.codigo } : null;
   }
 
   /* ── Handlers ───────────────────────────────────────────────────────────── */
@@ -168,23 +188,23 @@
     var offset = fetchAll ? 0 : (parseInt(q.offset, 10) || 0);
     page = base(page).order('created_at', { ascending: false });
     if (!fetchAll) page = page.range(offset, offset + limit - 1);
-    var res = await page;
+    // Página y resumen son consultas independientes → en paralelo.
+    var both = await Promise.all([page, base(client.from('acuses').select('estado,activo')).limit(5000)]);
+    var res = both[0], sumRes = both[1];
     if (res.error) throw httpError(500, res.error.message);
     var items = (res.data || []).map(function (r) {
       var det = r.acuse_detalle || [];
       r.__items = det.length; r.__unid = det.reduce(function (a, d) { return a + (Number(d.cantidad) || 0); }, 0);
       return headOut(r, null);
     });
-    // summary
     var summary = { pendiente: 0, en_transito: 0, entregado: 0, anulado: 0 };
-    var sumRes = await base(client.from('acuses').select('estado,activo')).limit(5000);
     (sumRes.data || []).forEach(function (r) { summary[Number(r.activo) === 0 ? 'anulado' : estadoUiKey(r.estado)] += 1; });
     return { items: items, total: res.count == null ? items.length : res.count, limit: fetchAll ? (res.count || items.length) : limit, offset: offset, summary: summary };
   }
 
   async function createAcuse(client, body) {
-    var snap = await snapshotCliente(client, body.Cod_Cliente);
-    var rep = await repNombre(client, body.ID_Repartidor);
+    var pre = await Promise.all([snapshotCliente(client, body.Cod_Cliente), repNombre(client, body.ID_Repartidor)]);
+    var snap = pre[0], rep = pre[1];
     var ins = {
       cod_cliente: body.Cod_Cliente,
       cliente_nombre: snap.cliente_nombre, cliente_ruc: snap.cliente_ruc, cliente_direccion: snap.cliente_direccion,
@@ -198,16 +218,23 @@
     if (r.error) throw httpError(500, r.error.message);
     var id = r.data.id;
     var dets = (body.detalles || []).map(function (d) { return { acuse_id: id, cod_mercaderia: d.Cod_Mercaderia, descripcion: d.Descr_SAP || null, cantidad: Number(d.Cantidad), um: d.UM || null, nota: d.Nota || null }; });
-    if (dets.length) await client.from('acuse_detalle').insert(dets);
-    await client.from('acuse_historial').insert({ acuse_id: id, estado: ins.estado, usuario: ins.usuario, observacion: 'Creacion del acuse' });
-    await client.from('acuse_log').insert({ acuse_id: id, accion: 'CREAR', usuario: ins.usuario, observacion: 'Acuse creado desde modulo web' });
+    // detalle + historial + log son independientes → una sola tanda en paralelo.
+    var writes = [
+      client.from('acuse_historial').insert({ acuse_id: id, estado: ins.estado, usuario: ins.usuario, observacion: 'Creacion del acuse' }),
+      client.from('acuse_log').insert({ acuse_id: id, accion: 'CREAR', usuario: ins.usuario, observacion: 'Acuse creado desde modulo web' })
+    ];
+    if (dets.length) writes.push(client.from('acuse_detalle').insert(dets));
+    await Promise.all(writes);
     return getAcuseFull(client, id);
   }
 
   async function updateAcuse(client, id, body) {
-    var snap = await snapshotCliente(client, body.Cod_Cliente);
-    var rep = await repNombre(client, body.ID_Repartidor);
-    var prev = await client.from('acuses').select('estado').eq('id', id).single();
+    var pre = await Promise.all([
+      snapshotCliente(client, body.Cod_Cliente),
+      repNombre(client, body.ID_Repartidor),
+      client.from('acuses').select('estado').eq('id', id).single()
+    ]);
+    var snap = pre[0], rep = pre[1], prev = pre[2];
     var upd = {
       cod_cliente: body.Cod_Cliente, cliente_nombre: snap.cliente_nombre, cliente_ruc: snap.cliente_ruc,
       cliente_direccion: snap.cliente_direccion, cliente_ciudad: snap.cliente_ciudad, cliente_telefono: snap.cliente_telefono,
@@ -220,9 +247,10 @@
     if (r.error) throw httpError(500, r.error.message);
     await client.from('acuse_detalle').delete().eq('acuse_id', id);
     var dets = (body.detalles || []).map(function (d) { return { acuse_id: id, cod_mercaderia: d.Cod_Mercaderia, descripcion: d.Descr_SAP || null, cantidad: Number(d.Cantidad), um: d.UM || null, nota: d.Nota || null }; });
-    if (dets.length) await client.from('acuse_detalle').insert(dets);
-    if (!prev.data || prev.data.estado !== upd.estado) await client.from('acuse_historial').insert({ acuse_id: id, estado: upd.estado, usuario: body.Usuario || CFG.user, observacion: 'Cambio de estado desde edicion' });
-    await client.from('acuse_log').insert({ acuse_id: id, accion: 'EDITAR', usuario: body.Usuario || CFG.user, observacion: 'Acuse actualizado desde modulo web' });
+    var writes = [client.from('acuse_log').insert({ acuse_id: id, accion: 'EDITAR', usuario: body.Usuario || CFG.user, observacion: 'Acuse actualizado desde modulo web' })];
+    if (dets.length) writes.push(client.from('acuse_detalle').insert(dets));
+    if (!prev.data || prev.data.estado !== upd.estado) writes.push(client.from('acuse_historial').insert({ acuse_id: id, estado: upd.estado, usuario: body.Usuario || CFG.user, observacion: 'Cambio de estado desde edicion' }));
+    await Promise.all(writes);
     return getAcuseFull(client, id);
   }
 
@@ -233,8 +261,10 @@
     if (body.Fecha_Entrega) patch.fecha_entrega = body.Fecha_Entrega;
     var r = await client.from('acuses').update(patch).eq('id', id);
     if (r.error) throw httpError(500, r.error.message);
-    await client.from('acuse_historial').insert({ acuse_id: id, estado: estado, usuario: usuario, observacion: body.Observacion || null });
-    await client.from('acuse_log').insert({ acuse_id: id, accion: 'CAMBIO_ESTADO', usuario: usuario, observacion: body.Observacion || null });
+    await Promise.all([
+      client.from('acuse_historial').insert({ acuse_id: id, estado: estado, usuario: usuario, observacion: body.Observacion || null }),
+      client.from('acuse_log').insert({ acuse_id: id, accion: 'CAMBIO_ESTADO', usuario: usuario, observacion: body.Observacion || null })
+    ]);
     return getAcuseFull(client, id);
   }
 
@@ -243,14 +273,20 @@
     var obs = (body && body.Observacion) || 'Anulacion';
     var r = await client.from('acuses').update({ estado: 'Anulado', activo: false }).eq('id', id);
     if (r.error) throw httpError(500, r.error.message);
-    await client.from('acuse_historial').insert({ acuse_id: id, estado: 'Anulado', usuario: usuario, observacion: obs });
-    await client.from('acuse_log').insert({ acuse_id: id, accion: 'ANULAR', usuario: usuario, observacion: obs });
+    await Promise.all([
+      client.from('acuse_historial').insert({ acuse_id: id, estado: 'Anulado', usuario: usuario, observacion: obs }),
+      client.from('acuse_log').insert({ acuse_id: id, accion: 'ANULAR', usuario: usuario, observacion: obs })
+    ]);
     return { ok: true, Estado: 'Anulado' };
   }
 
   async function dashboardResumen(client) {
     var hoy = new Date().toISOString().slice(0, 10);
-    var all = await client.from('acuses').select('estado,activo,fecha_emision,fecha_entrega').eq('activo', true).limit(10000);
+    var both = await Promise.all([
+      client.from('acuses').select('estado,activo,fecha_emision,fecha_entrega').eq('activo', true).limit(10000),
+      repCount(client)
+    ]);
+    var all = both[0], repCnt = both[1];
     var rows = all.data || [];
     var porEstadoMap = {};
     rows.forEach(function (r) { porEstadoMap[r.estado] = (porEstadoMap[r.estado] || 0) + 1; });
@@ -263,12 +299,11 @@
     });
     var pendientes = rows.filter(function (r) { return estadoUiKey(r.estado) === 'pendiente'; }).length;
     var terminados = rows.filter(function (r) { return estadoUiKey(r.estado) === 'entregado'; }).length;
-    var repC = await client.from('repartidores').select('*', { count: 'exact', head: true }).eq('activo', true);
     var porDiaMap = {};
     var d7 = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
     rows.forEach(function (r) { if (r.fecha_emision >= d7) porDiaMap[r.fecha_emision] = (porDiaMap[r.fecha_emision] || 0) + 1; });
     var porDia = Object.keys(porDiaMap).sort().map(function (f) { return { fecha: f, total: porDiaMap[f] }; });
-    return { porEstado: porEstado, fechas: fechas, resumen: { total: rows.length, pendientes: pendientes, entregados: terminados, terminados: terminados, repartidores: repC.count || 0 }, porDia: porDia };
+    return { porEstado: porEstado, fechas: fechas, resumen: { total: rows.length, pendientes: pendientes, entregados: terminados, terminados: terminados, repartidores: repCnt }, porDia: porDia };
   }
 
   async function auditoria(client, q) {
@@ -283,14 +318,15 @@
   }
 
   async function catRepartidores(client) {
-    var r = await client.from('repartidores').select('id,codigo,nombre,activo').order('nombre');
-    return { items: (r.data || []).map(function (x) { return { ID: x.id, Codigo_Repartidor: x.codigo, Nombre_Repartidor: x.nombre, Estado_Repartidor: x.activo ? 'Activo' : 'Inactivo' }; }) };
+    var reps = await getReps(client);
+    return { items: reps.map(function (x) { return { ID: x.id, Codigo_Repartidor: x.codigo, Nombre_Repartidor: x.nombre, Estado_Repartidor: x.activo ? 'Activo' : 'Inactivo' }; }) };
   }
   async function createRepartidor(client, body) {
     var nombre = (body.Nombre_Repartidor || body.nombre || '').trim();
     if (!nombre) throw httpError(400, 'Nombre del repartidor es obligatorio');
     var r = await client.from('repartidores').insert({ nombre: nombre, codigo: (body.Codigo_Repartidor || body.codigo || null), activo: true }).select('id,codigo,nombre,activo').single();
     if (r.error) throw httpError(500, r.error.message);
+    cacheClear('reps');
     var x = r.data;
     return { ID: x.id, Codigo_Repartidor: x.codigo, Nombre_Repartidor: x.nombre, Estado_Repartidor: 'Activo' };
   }
@@ -356,7 +392,8 @@
     var trendEnd = p.scope === 'all' ? p.end : ymd(endOfMonth(anchorMonth));
     var lo = trendStart < p.start ? trendStart : p.start;
     var hi = trendEnd > p.end ? trendEnd : p.end;
-    var rows = await fetchRange(client, lo, hi);
+    var rr = await Promise.all([fetchRange(client, lo, hi), repCount(client)]);
+    var rows = rr[0], repCnt = rr[1];
     var inPeriod = rows.filter(function (r) { return r.fecha_emision >= p.start && r.fecha_emision <= p.end; });
     var act = inPeriod.filter(function (r) { return Number(r.activo) !== 0; });
     var kpis = { pendientes: 0, entregados: 0, acuses: 0, en_transito: 0, anulados: 0, repartidores: 0 };
@@ -368,8 +405,7 @@
     });
     var legacy = inPeriod.filter(function (r) { return Number(r.activo) === 0; }).length;
     if (legacy > 0) { kpis.anulados += legacy; kpis.acuses += legacy; }
-    var repC = await client.from('repartidores').select('*', { count: 'exact', head: true }).eq('activo', true);
-    kpis.repartidores = repC.count || 0;
+    kpis.repartidores = repCnt;
     // zonas top 8
     var zmap = {}; act.forEach(function (r) { var z = zoneOf(r); zmap[z] = (zmap[z] || 0) + 1; });
     var zonas = Object.keys(zmap).map(function (z) { return { zona: z, total: zmap[z] }; }).sort(function (a, b) { return b.total - a.total; }).slice(0, 8);
@@ -426,9 +462,9 @@
     if (q.codCliente) query = query.eq('cod_cliente', q.codCliente);
     if (q.idRepartidor) query = query.eq('repartidor_id', q.idRepartidor);
     query = query.order('fecha_emision', { ascending: false }).limit(5000);
-    var res = await query;
-    var reps = await client.from('repartidores').select('id,codigo');
-    var repMap = {}; (reps.data || []).forEach(function (r) { repMap[r.id] = r.codigo; });
+    var qr = await Promise.all([query, getReps(client)]);
+    var res = qr[0], reps = qr[1];
+    var repMap = {}; reps.forEach(function (r) { repMap[r.id] = r.codigo; });
     var all = (res.data || []).filter(function (r) { return kpiMatch(kpi, r); });
     var fetchAll = ['1', 'true', 'all'].indexOf(String(q.all || '').toLowerCase()) >= 0;
     var limit = fetchAll ? all.length : Math.min(parseInt(q.limit, 10) || 8, 500);
@@ -454,9 +490,9 @@
     if (q.fecha) query = query.eq('fecha_emision', q.fecha);
     if (q.codCliente) query = query.eq('cod_cliente', q.codCliente);
     if (q.idRepartidor) query = query.eq('repartidor_id', q.idRepartidor);
-    var res = await query;
-    var reps = await client.from('repartidores').select('id,codigo,nombre');
-    var repInfo = {}; (reps.data || []).forEach(function (r) { repInfo[r.id] = r; });
+    var qr = await Promise.all([query, getReps(client)]);
+    var res = qr[0], reps = qr[1];
+    var repInfo = {}; reps.forEach(function (r) { repInfo[r.id] = r; });
     var agg = {};
     (res.data || []).forEach(function (r) {
       if (!r.repartidor_id) return;
