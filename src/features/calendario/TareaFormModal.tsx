@@ -4,22 +4,24 @@ import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/toast';
 import { useSession } from '@/store/session';
 import { createTarea, updateTarea, deleteTarea } from './calendarioApi';
-import { TAREA_ESTADOS, TAREA_PRIORIDADES, type Tarea } from './types';
+import { TAREA_ESTADOS, TAREA_PRIORIDADES, DEPOSITOS, type Tarea } from './types';
 
 interface Props {
   open: boolean;
   tarea: Tarea | null;         // null = nueva
   defaultFecha: string;        // YYYY-MM-DD para nueva
+  defaultDeposito: string;     // depósito seleccionado
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function TareaFormModal({ open, tarea, defaultFecha, onClose, onSaved }: Props) {
+export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onClose, onSaved }: Props) {
   const { user } = useSession();
   const [titulo, setTitulo] = useState('');
   const [fecha, setFecha] = useState(defaultFecha);
   const [hora, setHora] = useState('');
   const [responsable, setResponsable] = useState('');
+  const [deposito, setDeposito] = useState(defaultDeposito);
   const [prioridad, setPrioridad] = useState('NORMAL');
   const [estado, setEstado] = useState('Pendiente');
   const [descripcion, setDescripcion] = useState('');
@@ -29,13 +31,13 @@ export function TareaFormModal({ open, tarea, defaultFecha, onClose, onSaved }: 
     if (!open) return;
     if (tarea) {
       setTitulo(tarea.titulo); setFecha(tarea.fecha); setHora(tarea.hora ?? '');
-      setResponsable(tarea.responsable ?? ''); setPrioridad(tarea.prioridad); setEstado(tarea.estado);
-      setDescripcion(tarea.descripcion ?? '');
+      setResponsable(tarea.responsable ?? ''); setDeposito(tarea.deposito ?? defaultDeposito);
+      setPrioridad(tarea.prioridad); setEstado(tarea.estado); setDescripcion(tarea.descripcion ?? '');
     } else {
-      setTitulo(''); setFecha(defaultFecha); setHora(''); setResponsable('');
+      setTitulo(''); setFecha(defaultFecha); setHora(''); setResponsable(''); setDeposito(defaultDeposito);
       setPrioridad('NORMAL'); setEstado('Pendiente'); setDescripcion('');
     }
-  }, [open, tarea, defaultFecha]);
+  }, [open, tarea, defaultFecha, defaultDeposito]);
 
   async function save() {
     if (!titulo.trim()) { toast('Poné un título.', 'err'); return; }
@@ -43,7 +45,7 @@ export function TareaFormModal({ open, tarea, defaultFecha, onClose, onSaved }: 
     setSaving(true);
     const payload = {
       titulo: titulo.trim(), fecha, hora: hora || null, responsable: responsable.trim() || null,
-      prioridad, estado, descripcion: descripcion.trim() || null, usuario: user.nombre,
+      deposito: deposito || null, prioridad, estado, descripcion: descripcion.trim() || null, usuario: user.nombre,
     };
     try {
       if (tarea) { await updateTarea(tarea.id, payload); toast('Tarea actualizada.', 'ok'); }
@@ -99,7 +101,14 @@ export function TareaFormModal({ open, tarea, defaultFecha, onClose, onSaved }: 
             </select>
           </Field>
         </div>
-        <Field label="Responsable"><input className="input" value={responsable} onChange={(e) => setResponsable(e.target.value)} placeholder="Nombre del responsable" /></Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Depósito">
+            <select className="input" value={deposito} onChange={(e) => setDeposito(e.target.value)}>
+              {DEPOSITOS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </Field>
+          <Field label="Responsable"><input className="input" value={responsable} onChange={(e) => setResponsable(e.target.value)} placeholder="Nombre del responsable" /></Field>
+        </div>
         <Field label="Descripción">
           <textarea className="input min-h-[80px] py-2.5 resize-y" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Detalle de la tarea…" />
         </Field>
