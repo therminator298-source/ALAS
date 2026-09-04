@@ -121,27 +121,27 @@ export function CalendarioView() {
 
   return (
     <div ref={rootRef} className="flex flex-col h-full p-4 md:p-5 gap-3">
-      {/* Header propio del módulo */}
-      <div className="shrink-0 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-6 w-6 text-brand" strokeWidth={2} />
-            <div>
-              <h1 className="text-xl font-extrabold text-ink leading-tight">Calendario de tareas</h1>
-              <p className="text-2xs font-semibold text-ink-3">Planificación por depósito</p>
-            </div>
+      {/* Header propio del módulo — título · segmentado centrado · acción */}
+      <div className="shrink-0 flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <CalendarDays className="h-6 w-6 text-brand" strokeWidth={2} />
+          <div>
+            <h1 className="text-xl font-extrabold text-ink leading-tight">Calendario de tareas</h1>
+            <p className="text-2xs font-semibold text-ink-3">Planificación por depósito</p>
           </div>
-          <button className="btn-primary ml-auto" onClick={() => openNew(selectedDay ?? tISO)}>
-            <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
-          </button>
         </div>
-        <div className="dep-seg flex justify-center overflow-x-auto pb-0.5">
+        <div className="dep-seg flex-1 flex justify-center min-w-0 overflow-x-auto">
           <SegStrip
+            equal
+            className="w-full max-w-[620px]"
             items={DEPOSITOS.map((d) => ({ value: d, label: d, icon: DEP_ICON[d] ?? Warehouse, count: depCounts[d] ?? 0 }))}
             value={deposito}
             onChange={setDeposito}
           />
         </div>
+        <button className="btn-primary shrink-0" onClick={() => openNew(selectedDay ?? tISO)}>
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
+        </button>
       </div>
 
       {/* Cuerpo full-height */}

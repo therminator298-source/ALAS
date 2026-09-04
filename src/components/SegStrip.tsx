@@ -13,15 +13,17 @@ export interface SegItem {
  * ícono + label (+ número opcional), activo relleno azul de marca.
  */
 export function SegStrip({
-  items, value, onChange, className,
+  items, value, onChange, className, equal = false,
 }: {
   items: SegItem[];
   value: string;
   onChange: (v: string) => void;
   className?: string;
+  /** Segmentos del mismo ancho (flex-1). */
+  equal?: boolean;
 }) {
   return (
-    <div className={cn('inline-flex items-stretch rounded-2xl border border-border bg-surface overflow-hidden shadow-[0_2px_12px_rgba(15,36,64,0.07)]', className)}>
+    <div className={cn('items-stretch rounded-2xl border border-border bg-surface overflow-hidden shadow-[0_2px_12px_rgba(15,36,64,0.07)]', equal ? 'flex' : 'inline-flex', className)}>
       {items.map((it) => {
         const on = it.value === value;
         const Icon = it.icon;
@@ -32,6 +34,7 @@ export function SegStrip({
             onClick={() => onChange(it.value)}
             className={cn(
               'group flex items-center gap-3 px-5 md:px-6 py-3 border-l first:border-l-0 border-border transition-all duration-200 active:scale-[0.98]',
+              equal ? 'flex-1 justify-center' : '',
               on ? 'bg-gradient-to-br from-[#1478b8] to-brand text-white' : 'hover:bg-surface-3',
             )}
           >
@@ -40,7 +43,7 @@ export function SegStrip({
               strokeWidth={1.9}
             />
             {it.count != null ? (
-              <span className="flex flex-col items-start leading-none min-w-0">
+              <span className={cn('flex flex-col leading-none min-w-0', equal ? 'items-center' : 'items-start')}>
                 <span className={cn('text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap', on ? 'text-white/85' : 'text-ink-3')}>{it.label}</span>
                 <span className={cn('text-[22px] font-extrabold tabular-nums mt-1.5', on ? 'text-white' : 'text-ink')}>{it.count}</span>
               </span>
