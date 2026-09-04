@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Truck, CheckCircle2, Ban, Pencil, Clock } from 'lucide-react';
+import { Truck, CheckCircle2, Ban, Pencil, Clock, Printer } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -84,6 +84,11 @@ export function AcuseDetailModal({ open, acuseId, onClose, onChanged, onEdit }: 
           {acuse && k !== 'anulado' && (
             <button className="btn-ghost mr-auto text-faltante" onClick={() => setAnulando((v) => !v)} disabled={busy || k === 'entregado'}>
               <Ban className="h-4 w-4" /> Anular
+            </button>
+          )}
+          {acuse && (
+            <button className="btn-ghost" onClick={() => window.open(`/acuses/${acuse.id}/print`, '_blank')} disabled={busy}>
+              <Printer className="h-4 w-4" /> Imprimir
             </button>
           )}
           {acuse && canEdit && (

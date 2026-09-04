@@ -11,13 +11,15 @@ import { Products } from '@/pages/Products';
 import { IncidentPrint } from '@/pages/IncidentPrint';
 import { Audit } from '@/pages/Audit';
 import { AcusesView } from '@/features/acuses/AcusesView';
+import { AcusePrint } from '@/pages/AcusePrint';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Documento imprimible A4 — fuera del AppShell (sin sidebar/topbar) */}
+        {/* Documentos imprimibles A4 — fuera del AppShell (sin sidebar/topbar) */}
         <Route path="/incidents/:id/print" element={<IncidentPrint />} />
+        <Route path="/acuses/:id/print" element={<AcusePrint />} />
 
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
