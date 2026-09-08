@@ -20,14 +20,17 @@ create table if not exists tareas (
   prioridad   text not null default 'NORMAL',
   estado      text not null default 'Pendiente',
   usuario     text,
+  orden       int,                      -- orden manual de la lista (arrastrar para reordenar)
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 -- Por si la tabla ya existía sin la columna:
 alter table tareas add column if not exists deposito text;
+alter table tareas add column if not exists orden int;
 create index if not exists idx_tareas_fecha    on tareas (fecha);
 create index if not exists idx_tareas_estado   on tareas (estado);
 create index if not exists idx_tareas_deposito on tareas (deposito);
+create index if not exists idx_tareas_orden    on tareas (orden);
 
 -- Mantener updated_at
 create or replace function tareas_touch()

@@ -26,6 +26,7 @@ export interface Tarea {
   prioridad: TareaPrioridad | string;
   estado: TareaEstado | string;
   usuario: string | null;
+  orden: number | null;
   created_at: string;
 }
 
@@ -39,4 +40,5 @@ export interface NuevaTarea {
   prioridad: string;
   estado: string;
   usuario?: string | null;
+  orden?: number | null;
 }
