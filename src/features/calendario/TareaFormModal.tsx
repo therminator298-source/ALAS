@@ -9,6 +9,8 @@ import { createTarea, updateTarea, deleteTarea } from './calendarioApi';
 import { DEPOSITOS, type Tarea } from './types';
 
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+// Tipos de tarea rápidos (grilla). "OTROS" deja escribir un título libre.
+const TAREA_TIPOS = ['DESCARGA', 'REPOSICIÓN', 'ARREGLO', 'CARGA DE BASURA', 'CARGA DE CHATARRA', 'OTROS'];
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const DEP_ICONS: Record<string, LucideIcon> = { 'Depósito Central': Warehouse, 'Fábrica': Factory, 'Depósito Luque Sanber': Building2 };
 
@@ -99,7 +101,8 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
     >
       <div className="space-y-4">
         <Field label="Título *">
-          <input className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="¿Qué hay que hacer?" autoFocus />
+          <TipoButtons value={titulo} onPick={setTitulo} />
+          <input className="input mt-2" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Elegí un tipo arriba o escribí…" autoFocus />
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Fecha *"><input type="date" className="input" value={fecha} onChange={(e) => setFecha(e.target.value)} /></Field>
@@ -153,6 +156,34 @@ function EstadoButtons({ value, onChange }: { value: string; onChange: (v: strin
           >
             <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-white' : b.dot)} strokeWidth={2.4} />
             {b.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Tipos de tarea en grilla compacta; un toque completa el título. */
+function TipoButtons({ value, onPick }: { value: string; onPick: (v: string) => void }) {
+  const v = value.trim().toUpperCase();
+  return (
+    <div className="grid grid-cols-3 gap-1.5">
+      {TAREA_TIPOS.map((tp) => {
+        const on = v === tp;
+        return (
+          <button
+            key={tp}
+            type="button"
+            onClick={(e) => {
+              onPick(tp === 'OTROS' ? '' : tp);
+              if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(e.currentTarget, { scale: 0.85 }, { scale: 1, duration: 0.3, ease: 'back.out(3)' });
+            }}
+            className={cn(
+              'rounded-lg border px-1.5 py-2 text-[11px] font-bold leading-tight text-center transition-colors active:scale-[0.96]',
+              on ? 'bg-gradient-to-br from-[#1478b8] to-brand border-brand text-white shadow-sm' : 'border-border bg-surface text-ink-2 hover:bg-surface-3 hover:border-brand/40',
+            )}
+          >
+            {tp}
           </button>
         );
       })}
