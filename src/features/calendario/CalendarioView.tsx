@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, Loader, CheckCircle2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SegStrip } from '@/components/SegStrip';
 import { listTareas, changeEstadoTarea, updateTarea } from './calendarioApi';
@@ -22,6 +23,9 @@ const CHIP: Record<string, string> = {
   hecho: 'bg-emerald-100 text-emerald-700',
 };
 const BAR: Record<string, string> = { pendiente: 'bg-amber-400', en_curso: 'bg-blue-500', hecho: 'bg-emerald-500' };
+const EST_ICON: Record<string, LucideIcon> = { pendiente: Clock, en_curso: Loader, hecho: CheckCircle2 };
+const EST_RING: Record<string, string> = { pendiente: 'ring-amber-300/60', en_curso: 'ring-blue-300/60', hecho: 'ring-emerald-300/60' };
+const EST_BADGE: Record<string, string> = { pendiente: 'bg-amber-50 text-amber-700 border-amber-200', en_curso: 'bg-blue-50 text-blue-700 border-blue-200', hecho: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
 const EST_FILTERS: { k: string; label: string }[] = [
   { k: 'all', label: 'Todas' }, { k: 'pendiente', label: 'Pend.' }, { k: 'en_curso', label: 'Curso' }, { k: 'hecho', label: 'Hecho' },
 ];
@@ -349,7 +353,7 @@ export function CalendarioView() {
             )}
           </div>
 
-          <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
+          <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2.5">
             {listTasks.length === 0 ? (
               <div ref={emptyRef} className="p-10 flex flex-col items-center text-center gap-3">
                 <span className="grid place-items-center h-16 w-16 rounded-2xl bg-gradient-to-br from-brand-soft to-brand-soft/40 text-brand ring-1 ring-brand/10 shadow-sm">
@@ -365,6 +369,8 @@ export function CalendarioView() {
               </div>
             ) : listTasks.map((t) => {
               const k = estadoKey(t.estado);
+              const d = new Date(`${t.fecha}T00:00:00`);
+              const EstIcon = EST_ICON[k] ?? Clock;
               return (
                 <div key={t.id}
                   role="button"
@@ -374,27 +380,37 @@ export function CalendarioView() {
                   onDragEnd={() => { setDragId(null); setDragOver(null); }}
                   onClick={() => openEdit(t)}
                   onKeyDown={(e) => { if (e.key === 'Enter') openEdit(t); }}
-                  className={cn('cal-row group w-full text-left px-4 py-3 hover:bg-brand-soft/30 transition-colors flex items-start gap-3 relative cursor-pointer', dragId === t.id && 'opacity-40')}>
-                  <span className={cn('absolute left-0 top-2 bottom-2 w-1 rounded-r', BAR[k])} />
-                  <div className="shrink-0 w-12 text-center pl-1">
-                    <div className="text-sm font-extrabold text-brand tabular-nums leading-none">{new Date(`${t.fecha}T00:00:00`).getDate()}</div>
-                    <div className="text-2xs font-bold uppercase text-ink-3">{MESES[new Date(`${t.fecha}T00:00:00`).getMonth()]?.slice(0, 3)}</div>
+                  className={cn('cal-row group relative flex items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2.5 cursor-pointer overflow-hidden transition-all hover:border-brand/40 hover:shadow-[0_8px_22px_rgba(20,120,184,0.12)] hover:-translate-y-0.5', dragId === t.id && 'opacity-40')}>
+                  <span className={cn('absolute left-0 top-0 bottom-0 w-1.5 group-hover:w-2 transition-all', BAR[k])} />
+                  <div className={cn('shrink-0 flex flex-col items-center justify-center h-12 w-12 rounded-xl border ml-1', EST_BADGE[k])}>
+                    <span className="text-base font-extrabold tabular-nums leading-none">{d.getDate()}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wide opacity-80 mt-0.5">{MESES[d.getMonth()]?.slice(0, 3)}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-ink truncate flex items-center gap-1.5">
-                      {t.prioridad === 'ALTA' && <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />}
+                    <div className="text-sm font-bold text-ink truncate flex items-center gap-1.5">
+                      {t.prioridad === 'ALTA' && <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" title="Prioridad alta" />}
                       {t.titulo}
                     </div>
-                    <div className="text-2xs text-ink-3 truncate flex items-center gap-2 mt-0.5">
-                      {t.hora && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.hora.slice(0, 5)}</span>}
-                      <span className="truncate">{t.responsable ?? 'Sin responsable'}</span>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      {t.hora && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-ink-2 bg-surface-3 rounded-full px-1.5 py-0.5"><Clock className="h-3 w-3" />{t.hora.slice(0, 5)}</span>}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-ink-2 bg-surface-3 rounded-full px-1.5 py-0.5 max-w-[150px] truncate"><User className="h-3 w-3 shrink-0" />{t.responsable ?? 'Sin responsable'}</span>
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); cycleEstado(t); if (!reduceMotion()) gsap.fromTo(e.currentTarget, { scale: 0.8 }, { scale: 1, duration: 0.35, ease: 'back.out(3)' }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cycleEstado(t);
+                      if (reduceMotion()) return;
+                      gsap.fromTo(e.currentTarget, { scale: 0.72 }, { scale: 1, duration: 0.42, ease: 'back.out(3.5)' });
+                      const ic = e.currentTarget.querySelector('svg');
+                      if (ic) gsap.fromTo(ic, { rotate: -45, scale: 0.5 }, { rotate: 0, scale: 1, duration: 0.42, ease: 'back.out(4)' });
+                      const card = e.currentTarget.closest('.cal-row');
+                      if (card) gsap.fromTo(card, { backgroundColor: 'rgba(20,120,184,0.12)' }, { backgroundColor: 'rgba(255,255,255,0)', duration: 0.65, ease: 'power2.out', clearProps: 'background-color' });
+                    }}
                     title="Tocá para cambiar el estado"
-                    className={cn('chip h-6 px-2 text-2xs font-bold shrink-0 transition-colors cursor-pointer hover:brightness-95 active:scale-95', CHIP[k])}>
+                    className={cn('shrink-0 inline-flex items-center gap-1.5 h-8 pl-2 pr-2.5 rounded-full text-2xs font-extrabold ring-1 cursor-pointer transition-transform hover:scale-105 active:scale-95', CHIP[k], EST_RING[k])}>
+                    <EstIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
                     {estLabel(k)}
                   </button>
                 </div>
@@ -438,8 +454,8 @@ function DayTooltip({ iso, rect, tasks }: { iso: string; rect: DOMRect; tasks: T
   const shown = tasks.slice(0, 6);
   const k0 = tasks.reduce((a, t) => { const k = estadoKey(t.estado); a[k] = (a[k] ?? 0) + 1; return a; }, {} as Record<string, number>);
 
-  return (
-    <div ref={ref} style={{ position: 'fixed', left, width: W, zIndex: 60, pointerEvents: 'none', ...pos }}
+  return createPortal(
+    <div ref={ref} style={{ position: 'fixed', left, width: W, zIndex: 2147483000, pointerEvents: 'none', ...pos }}
       className="rounded-2xl border border-border bg-surface shadow-[0_18px_48px_rgba(15,36,64,0.22)] overflow-hidden">
       {/* Cabecera azul */}
       <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-gradient-to-r from-[#1478b8] to-brand text-white">
@@ -469,7 +485,8 @@ function DayTooltip({ iso, rect, tasks }: { iso: string; rect: DOMRect; tasks: T
         })}
         {tasks.length > shown.length && <div className="text-2xs font-bold text-brand text-center pt-0.5">+{tasks.length - shown.length} más</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
