@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, Loader, CheckCircle2, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, Loader, CheckCircle2, Check, ArrowUpDown, ArrowUp, ArrowDown, Flag, ArrowDownAZ, CalendarClock, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SegStrip } from '@/components/SegStrip';
 import { listTareas, changeEstadoTarea, updateTarea } from './calendarioApi';
@@ -26,6 +26,21 @@ const BAR: Record<string, string> = { pendiente: 'bg-amber-400', en_curso: 'bg-b
 const EST_ICON: Record<string, LucideIcon> = { pendiente: Clock, en_curso: Loader, hecho: CheckCircle2 };
 const EST_RING: Record<string, string> = { pendiente: 'ring-amber-300/60', en_curso: 'ring-blue-300/60', hecho: 'ring-emerald-300/60' };
 const EST_BADGE: Record<string, string> = { pendiente: 'bg-amber-50 text-amber-700 border-amber-200', en_curso: 'bg-blue-50 text-blue-700 border-blue-200', hecho: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+// Orden de la lista
+const SORTS: { k: string; label: string; icon: LucideIcon }[] = [
+  { k: 'fecha', label: 'Fecha y hora', icon: CalendarClock },
+  { k: 'estado', label: 'Estado', icon: ListTodo },
+  { k: 'prioridad', label: 'Prioridad', icon: Flag },
+  { k: 'titulo', label: 'Título A–Z', icon: ArrowDownAZ },
+];
+const ESTADO_RANK: Record<string, number> = { pendiente: 0, en_curso: 1, hecho: 2 };
+const PRIO_RANK: Record<string, number> = { ALTA: 0, NORMAL: 1, BAJA: 2 };
+function cmpBy(a: Tarea, b: Tarea, by: string): number {
+  if (by === 'estado') return (ESTADO_RANK[estadoKey(a.estado)] ?? 9) - (ESTADO_RANK[estadoKey(b.estado)] ?? 9);
+  if (by === 'prioridad') return (PRIO_RANK[String(a.prioridad).toUpperCase()] ?? 1) - (PRIO_RANK[String(b.prioridad).toUpperCase()] ?? 1);
+  if (by === 'titulo') return a.titulo.localeCompare(b.titulo, 'es');
+  return a.fecha === b.fecha ? (a.hora ?? '99').localeCompare(b.hora ?? '99') : a.fecha.localeCompare(b.fecha);
+}
 const EST_FILTERS: { k: string; label: string }[] = [
   { k: 'all', label: 'Todas' }, { k: 'pendiente', label: 'Pend.' }, { k: 'en_curso', label: 'Curso' }, { k: 'hecho', label: 'Hecho' },
 ];
@@ -53,6 +68,8 @@ export function CalendarioView() {
   const [fEstado, setFEstado] = useState('all');
   const [fResp, setFResp] = useState('');
   const [fSearch, setFSearch] = useState('');
+  const [sortBy, setSortBy] = useState('fecha');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [dragId, setDragId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [tip, setTip] = useState<{ iso: string; rect: DOMRect } | null>(null);
@@ -111,8 +128,12 @@ export function CalendarioView() {
     if (fResp) rows = rows.filter((t) => (t.responsable ?? '') === fResp);
     const term = norm(fSearch).trim();
     if (term) rows = rows.filter((t) => norm(t.titulo).includes(term) || norm(t.responsable).includes(term) || norm(t.descripcion).includes(term));
-    return rows.sort((a, b) => (a.fecha === b.fecha ? (a.hora ?? '99').localeCompare(b.hora ?? '99') : a.fecha.localeCompare(b.fecha)));
-  }, [depTareas, selectedDay, fEstado, fResp, fSearch]);
+    return rows.sort((a, b) => {
+      let r = cmpBy(a, b, sortBy);
+      if (r === 0) r = a.fecha === b.fecha ? (a.hora ?? '99').localeCompare(b.hora ?? '99') : a.fecha.localeCompare(b.fecha);
+      return sortDir === 'desc' ? -r : r;
+    });
+  }, [depTareas, selectedDay, fEstado, fResp, fSearch, sortBy, sortDir]);
   const filtersActive = fEstado !== 'all' || !!fResp || fSearch.trim() !== '';
 
   // GSAP: entrada de barras/tarjetas al montar
@@ -150,7 +171,7 @@ export function CalendarioView() {
       gsap.from('.cal-row', { opacity: 0, x: 14, duration: 0.36, stagger: 0.035, ease: 'power2.out', clearProps: 'all' });
     }, listRef.current);
     return () => ctx.revert();
-  }, [selectedDay, deposito, cursor.m, cursor.y, fEstado, fResp, fSearch]);
+  }, [selectedDay, deposito, cursor.m, cursor.y, fEstado, fResp, fSearch, sortBy, sortDir]);
 
   // GSAP: empty state al aparecer
   useEffect(() => {
@@ -348,6 +369,7 @@ export function CalendarioView() {
               ))}
             </div>
             {resps.length > 0 && <RespFilter value={fResp} options={resps} onChange={setFResp} />}
+            <SortSelect value={sortBy} onChange={setSortBy} dir={sortDir} onToggleDir={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))} />
             {filtersActive && (
               <button onClick={() => { setFEstado('all'); setFResp(''); setFSearch(''); }} className="chip h-9 bg-surface-3 text-ink-2 shrink-0"><X className="h-3.5 w-3.5" /> Limpiar</button>
             )}
@@ -367,7 +389,7 @@ export function CalendarioView() {
                 </div>
                 <button onClick={() => openNew(selectedDay ?? tISO)} className="btn-primary h-9 bg-gradient-to-br from-[#1478b8] to-brand shadow-[0_6px_16px_rgba(20,120,184,0.30)]"><Plus className="h-4 w-4" strokeWidth={2.5} /> Agregar tarea</button>
               </div>
-            ) : listTasks.map((t) => {
+            ) : listTasks.map((t, idx) => {
               const k = estadoKey(t.estado);
               const d = new Date(`${t.fecha}T00:00:00`);
               const EstIcon = EST_ICON[k] ?? Clock;
@@ -380,9 +402,10 @@ export function CalendarioView() {
                   onDragEnd={() => { setDragId(null); setDragOver(null); }}
                   onClick={() => openEdit(t)}
                   onKeyDown={(e) => { if (e.key === 'Enter') openEdit(t); }}
-                  className={cn('cal-row group relative flex items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2.5 cursor-pointer overflow-hidden transition-all hover:border-brand/40 hover:shadow-[0_8px_22px_rgba(20,120,184,0.12)] hover:-translate-y-0.5', dragId === t.id && 'opacity-40')}>
+                  className={cn('cal-row group relative flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-3 py-2.5 cursor-pointer overflow-hidden transition-all hover:border-brand/40 hover:shadow-[0_8px_22px_rgba(20,120,184,0.12)] hover:-translate-y-0.5', dragId === t.id && 'opacity-40')}>
                   <span className={cn('absolute left-0 top-0 bottom-0 w-1.5 group-hover:w-2 transition-all', BAR[k])} />
-                  <div className={cn('shrink-0 flex flex-col items-center justify-center h-12 w-12 rounded-xl border ml-1', EST_BADGE[k])}>
+                  <span className="shrink-0 grid place-items-center h-6 w-6 rounded-full bg-surface-3 text-ink-3 text-[11px] font-extrabold tabular-nums ml-1 group-hover:bg-brand group-hover:text-white transition-colors">{idx + 1}</span>
+                  <div className={cn('shrink-0 flex flex-col items-center justify-center h-12 w-12 rounded-xl border', EST_BADGE[k])}>
                     <span className="text-base font-extrabold tabular-nums leading-none">{d.getDate()}</span>
                     <span className="text-[9px] font-bold uppercase tracking-wide opacity-80 mt-0.5">{MESES[d.getMonth()]?.slice(0, 3)}</span>
                   </div>
@@ -487,6 +510,56 @@ function DayTooltip({ iso, rect, tasks }: { iso: string; rect: DOMRect; tasks: T
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** Ordenador PRO: dropdown de criterio + toggle asc/desc. */
+function SortSelect({ value, onChange, dir, onToggleDir }: { value: string; onChange: (v: string) => void; dir: 'asc' | 'desc'; onToggleDir: () => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const cur = SORTS.find((s) => s.k === value) ?? SORTS[0]!;
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onEsc);
+    if (menuRef.current && !reduceMotion()) {
+      gsap.fromTo(menuRef.current, { opacity: 0, y: -6, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: 'top right' });
+      gsap.fromTo(menuRef.current.querySelectorAll('.sort-opt'), { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.18, stagger: 0.03, ease: 'power2.out', delay: 0.03 });
+    }
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
+  }, [open]);
+  return (
+    <div ref={wrapRef} className="relative shrink-0 flex items-center gap-1">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className={cn('inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-bold transition-colors border-border text-ink-2 hover:bg-surface-3', open && 'ring-2 ring-brand/30 border-brand')}>
+        <ArrowUpDown className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline max-w-[96px] truncate">{cur.label}</span>
+        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} />
+      </button>
+      <button type="button" onClick={onToggleDir} aria-label="Invertir orden"
+        title={dir === 'asc' ? 'Ascendente' : 'Descendente'}
+        className="h-9 w-9 grid place-items-center rounded-lg border border-border text-ink-2 hover:bg-surface-3 hover:text-brand transition-colors">
+        {dir === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div ref={menuRef} className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[190px] rounded-xl border border-border bg-surface shadow-[0_16px_44px_rgba(15,36,64,0.20)] p-1.5">
+          {SORTS.map((s) => {
+            const on = s.k === value;
+            const Icon = s.icon;
+            return (
+              <button key={s.k} type="button" onClick={() => { onChange(s.k); setOpen(false); }}
+                className={cn('sort-opt flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-semibold text-left transition-colors', on ? 'bg-brand-soft text-brand' : 'text-ink hover:bg-surface-3')}>
+                <span className={cn('grid place-items-center h-7 w-7 rounded-lg shrink-0', on ? 'bg-gradient-to-br from-[#1478b8] to-brand text-white' : 'bg-surface-3 text-ink-2')}><Icon className="h-4 w-4" /></span>
+                <span className="truncate">{s.label}</span>
+                {on && <Check className="h-4 w-4 ml-auto shrink-0" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
