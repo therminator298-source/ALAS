@@ -201,11 +201,11 @@ export function CalendarioView() {
       <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-3 lg:gap-4">
         {/* ── Calendario mensual (desktop / tablet grande) ── */}
         <div className="cal-panel card p-0 hidden lg:flex flex-col min-h-0 overflow-hidden ring-1 ring-brand/10">
-          <div className="shrink-0 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-soft/70 via-surface to-surface border-b border-border">
-            <button className="btn-secondary h-9 w-9 p-0 justify-center" onClick={() => goMonth(-1)} aria-label="Mes anterior"><ChevronLeft className="h-4 w-4" /></button>
-            <button className="btn-secondary h-9 w-9 p-0 justify-center" onClick={() => goMonth(1)} aria-label="Mes siguiente"><ChevronRight className="h-4 w-4" /></button>
-            <h2 className="text-lg font-extrabold text-ink capitalize ml-1">{MESES[cursor.m]} <span className="text-brand">{cursor.y}</span></h2>
-            <button className="btn-ghost h-9 ml-auto text-brand font-bold" onClick={goToday}>Hoy</button>
+          <div className="shrink-0 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#1478b8] to-brand text-white shadow-[0_2px_10px_rgba(20,120,184,0.25)]">
+            <button className="h-9 w-9 p-0 grid place-items-center rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors" onClick={() => goMonth(-1)} aria-label="Mes anterior"><ChevronLeft className="h-4 w-4" /></button>
+            <button className="h-9 w-9 p-0 grid place-items-center rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors" onClick={() => goMonth(1)} aria-label="Mes siguiente"><ChevronRight className="h-4 w-4" /></button>
+            <h2 className="text-lg font-extrabold text-white capitalize ml-1">{MESES[cursor.m]} <span className="text-white/75">{cursor.y}</span></h2>
+            <button className="h-9 ml-auto px-3.5 rounded-lg font-bold text-white bg-white/15 hover:bg-white/25 transition-colors" onClick={goToday}>Hoy</button>
           </div>
           <div className="flex-1 min-h-0 flex flex-col p-3">
             <div className="shrink-0 grid grid-cols-7 gap-1.5 mb-1.5 rounded-lg bg-brand-soft/40 py-1.5">
@@ -313,15 +313,15 @@ export function CalendarioView() {
 
         {/* ── Lista de tareas ── */}
         <div className="cal-panel card overflow-hidden flex flex-col min-h-0 flex-1 ring-1 ring-brand/10">
-          <div className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-brand-soft/70 via-surface to-surface border-b border-border">
+          <div className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-[#1478b8] to-brand text-white shadow-[0_2px_10px_rgba(20,120,184,0.25)]">
             <div className="min-w-0 flex items-center gap-2">
-              <span className="grid place-items-center h-8 w-8 rounded-lg bg-white text-brand shadow-sm ring-1 ring-brand/10 shrink-0"><ListTodo className="h-4 w-4" /></span>
+              <span className="grid place-items-center h-8 w-8 rounded-lg bg-white/20 text-white shrink-0"><ListTodo className="h-4 w-4" /></span>
               <div className="min-w-0">
-                <div className="text-sm font-extrabold text-ink capitalize truncate">{selectedDay ? fmtDay(selectedDay) : `Tareas de ${MESES[cursor.m]}`}</div>
-                <div className="text-2xs font-semibold text-ink-3 truncate">{listTasks.length} tarea{listTasks.length === 1 ? '' : 's'} · {deposito}</div>
+                <div className="text-sm font-extrabold text-white capitalize truncate">{selectedDay ? fmtDay(selectedDay) : `Tareas de ${MESES[cursor.m]}`}</div>
+                <div className="text-2xs font-semibold text-white/70 truncate">{listTasks.length} tarea{listTasks.length === 1 ? '' : 's'} · {deposito}</div>
               </div>
             </div>
-            {selectedDay && <button onClick={() => setSelectedDay(null)} className="chip h-7 bg-white text-brand ring-1 ring-brand/20 shrink-0 font-bold"><X className="h-3.5 w-3.5" /> Mes</button>}
+            {selectedDay && <button onClick={() => setSelectedDay(null)} className="chip h-7 bg-white/20 text-white shrink-0 font-bold hover:bg-white/30 transition-colors"><X className="h-3.5 w-3.5" /> Mes</button>}
           </div>
 
           {/* Barra de filtros */}
