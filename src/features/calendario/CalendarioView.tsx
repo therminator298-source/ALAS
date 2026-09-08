@@ -51,6 +51,7 @@ export function CalendarioView() {
   const [fSearch, setFSearch] = useState('');
   const [dragId, setDragId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [tip, setTip] = useState<{ iso: string; rect: DOMRect } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -237,6 +238,8 @@ export function CalendarioView() {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDay(iso); } }}
                     onDragOver={(e) => { if (dragId != null) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOver !== iso) setDragOver(iso); } }}
                     onDrop={(e) => { e.preventDefault(); const id = Number(e.dataTransfer.getData('text/plain')); setDragOver(null); setDragId(null); if (id) moveTarea(id, iso); }}
+                    onMouseEnter={(e) => { if (dayTasks.length && dragId == null) setTip({ iso, rect: e.currentTarget.getBoundingClientRect() }); }}
+                    onMouseLeave={() => setTip((t) => (t?.iso === iso ? null : t))}
                     className={cn('cal-cell group relative flex flex-col text-left rounded-xl border p-1.5 overflow-hidden transition-all cursor-pointer',
                       inMonth ? (wknd ? 'bg-brand-soft/20 border-border' : 'bg-surface border-border') : 'bg-surface-2/30 border-transparent',
                       inMonth && 'hover:border-brand/60 hover:shadow-[0_6px_18px_rgba(20,120,184,0.12)]',
@@ -409,8 +412,63 @@ export function CalendarioView() {
         <Plus className="h-6 w-6" strokeWidth={2.6} />
       </button>
 
+      {tip && <DayTooltip iso={tip.iso} rect={tip.rect} tasks={byDate.get(tip.iso) ?? []} />}
+
       <TareaFormModal open={formOpen} tarea={editing} defaultFecha={formFecha} defaultDeposito={deposito}
         onClose={() => setFormOpen(false)} onSaved={() => { setFormOpen(false); reload(); }} />
+    </div>
+  );
+}
+
+/** Tooltip PRO al pasar el cursor sobre un día: lista lo cargado esa fecha. */
+function DayTooltip({ iso, rect, tasks }: { iso: string; rect: DOMRect; tasks: Tarea[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current || reduceMotion()) return;
+    gsap.fromTo(ref.current, { opacity: 0, y: 10, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.24, ease: 'back.out(2.2)' });
+  }, [iso]);
+
+  const W = 268;
+  const left = Math.max(8, Math.min(rect.left + rect.width / 2 - W / 2, window.innerWidth - W - 8));
+  const below = rect.top < 240; // cerca del borde superior → mostrar abajo
+  const pos: { top?: number; bottom?: number } = below
+    ? { top: rect.bottom + 10 }
+    : { bottom: window.innerHeight - rect.top + 10 };
+
+  const shown = tasks.slice(0, 6);
+  const k0 = tasks.reduce((a, t) => { const k = estadoKey(t.estado); a[k] = (a[k] ?? 0) + 1; return a; }, {} as Record<string, number>);
+
+  return (
+    <div ref={ref} style={{ position: 'fixed', left, width: W, zIndex: 60, pointerEvents: 'none', ...pos }}
+      className="rounded-2xl border border-border bg-surface shadow-[0_18px_48px_rgba(15,36,64,0.22)] overflow-hidden">
+      {/* Cabecera azul */}
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-gradient-to-r from-[#1478b8] to-brand text-white">
+        <span className="text-2xs font-extrabold uppercase tracking-wide capitalize truncate">{fmtDay(iso)}</span>
+        <span className="shrink-0 grid place-items-center min-w-[22px] h-5 px-1.5 rounded-full bg-white/20 text-white text-2xs font-extrabold">{tasks.length}</span>
+      </div>
+      {/* Resumen por estado */}
+      <div className="flex items-center gap-2 px-3.5 pt-2">
+        {(['pendiente', 'en_curso', 'hecho'] as const).filter((k) => k0[k]).map((k) => (
+          <span key={k} className={cn('inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full', CHIP[k])}>
+            <span className={cn('h-1.5 w-1.5 rounded-full', BAR[k])} />{k0[k]} {estLabel(k)}
+          </span>
+        ))}
+      </div>
+      {/* Lista */}
+      <div className="px-2 py-2 space-y-1">
+        {shown.map((t) => {
+          const k = estadoKey(t.estado);
+          return (
+            <div key={t.id} className="flex items-center gap-2 px-1.5 py-1 rounded-lg">
+              <span className={cn('h-6 w-1 rounded-full shrink-0', BAR[k])} />
+              {t.hora && <span className="text-2xs font-bold tabular-nums text-ink-3 shrink-0">{t.hora.slice(0, 5)}</span>}
+              <span className="text-xs font-semibold text-ink truncate flex-1">{t.titulo}</span>
+              {t.prioridad === 'ALTA' && <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />}
+            </div>
+          );
+        })}
+        {tasks.length > shown.length && <div className="text-2xs font-bold text-brand text-center pt-0.5">+{tasks.length - shown.length} más</div>}
+      </div>
     </div>
   );
 }
