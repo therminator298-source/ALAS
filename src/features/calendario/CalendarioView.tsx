@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SegStrip } from '@/components/SegStrip';
 import { listTareas, changeEstadoTarea, updateTarea } from './calendarioApi';
@@ -41,7 +41,6 @@ export function CalendarioView() {
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [deposito, setDeposito] = useState<string>(DEPOSITOS[0]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
-  const [live, setLive] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -56,6 +55,7 @@ export function CalendarioView() {
   const gridRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
 
   const cells = useMemo(() => {
     const first = new Date(cursor.y, cursor.m, 1);
@@ -72,7 +72,7 @@ export function CalendarioView() {
     if (cells.length === 0) return;
     let alive = true;
     listTareas(isoOf(cells[0]!), isoOf(cells[cells.length - 1]!)).then((res) => {
-      if (!alive) return; setTareas(res.rows); setLive(res.live);
+      if (!alive) return; setTareas(res.rows);
     });
     return () => { alive = false; };
   }, [cells, reloadKey]);
@@ -147,6 +147,12 @@ export function CalendarioView() {
     return () => ctx.revert();
   }, [selectedDay, deposito, cursor.m, cursor.y, fEstado, fResp, fSearch]);
 
+  // GSAP: empty state al aparecer
+  useEffect(() => {
+    if (listTasks.length !== 0 || !emptyRef.current || reduceMotion()) return;
+    gsap.from(emptyRef.current.children, { opacity: 0, y: 12, scale: 0.96, duration: 0.4, stagger: 0.07, ease: 'back.out(1.6)', clearProps: 'all' });
+  }, [listTasks.length, filtersActive, selectedDay, deposito]);
+
   const reload = () => setReloadKey((k) => k + 1);
   const goMonth = (delta: number) => setCursor((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
   const goToday = () => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); };
@@ -192,7 +198,7 @@ export function CalendarioView() {
             onChange={setDeposito}
           />
         </div>
-        <button className="btn-primary shrink-0 hidden sm:inline-flex bg-gradient-to-br from-[#1478b8] to-brand" onClick={() => openNew(selectedDay ?? tISO)}>
+        <button className="btn-primary shrink-0 hidden sm:inline-flex bg-gradient-to-br from-[#1478b8] to-brand" onClick={() => openNew(tISO)}>
           <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
         </button>
       </div>
@@ -272,10 +278,6 @@ export function CalendarioView() {
                 );
               })}
             </div>
-            <div className="shrink-0 mt-2 text-2xs font-semibold text-ink-3 inline-flex items-center gap-1.5">
-              <span className={cn('h-2 w-2 rounded-full', live ? 'bg-emerald-500' : 'bg-amber-400')} />
-              {live ? 'Datos en vivo · Supabase' : 'Vista previa · datos de ejemplo (creá el Supabase del Calendario)'}
-            </div>
           </div>
         </div>
 
@@ -338,12 +340,7 @@ export function CalendarioView() {
                 </button>
               ))}
             </div>
-            {resps.length > 0 && (
-              <select value={fResp} onChange={(e) => setFResp(e.target.value)} className="input h-9 text-sm w-auto max-w-[160px] shrink-0">
-                <option value="">Responsable</option>
-                {resps.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            )}
+            {resps.length > 0 && <RespFilter value={fResp} options={resps} onChange={setFResp} />}
             {filtersActive && (
               <button onClick={() => { setFEstado('all'); setFResp(''); setFSearch(''); }} className="chip h-9 bg-surface-3 text-ink-2 shrink-0"><X className="h-3.5 w-3.5" /> Limpiar</button>
             )}
@@ -351,9 +348,17 @@ export function CalendarioView() {
 
           <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
             {listTasks.length === 0 ? (
-              <div className="p-8 text-center text-sm text-ink-3">
-                {filtersActive ? 'Sin tareas con esos filtros.' : <>Sin tareas {selectedDay ? 'este día' : 'este mes'} en {deposito}.</>}
-                <button onClick={() => openNew(selectedDay ?? tISO)} className="block mx-auto mt-3 btn-secondary h-9"><Plus className="h-4 w-4" /> Agregar tarea</button>
+              <div ref={emptyRef} className="p-10 flex flex-col items-center text-center gap-3">
+                <span className="grid place-items-center h-16 w-16 rounded-2xl bg-gradient-to-br from-brand-soft to-brand-soft/40 text-brand ring-1 ring-brand/10 shadow-sm">
+                  <CalendarX2 className="h-7 w-7" strokeWidth={1.8} />
+                </span>
+                <div>
+                  <div className="text-sm font-extrabold text-ink">{filtersActive ? 'Sin coincidencias' : 'Sin tareas'}</div>
+                  <div className="text-2xs font-semibold text-ink-3 mt-1 max-w-[220px]">
+                    {filtersActive ? 'Probá con otros filtros o limpialos.' : `No hay tareas ${selectedDay ? 'este día' : 'este mes'} en ${deposito}.`}
+                  </div>
+                </div>
+                <button onClick={() => openNew(selectedDay ?? tISO)} className="btn-primary h-9 bg-gradient-to-br from-[#1478b8] to-brand shadow-[0_6px_16px_rgba(20,120,184,0.30)]"><Plus className="h-4 w-4" strokeWidth={2.5} /> Agregar tarea</button>
               </div>
             ) : listTasks.map((t) => {
               const k = estadoKey(t.estado);
@@ -398,7 +403,7 @@ export function CalendarioView() {
 
       {/* FAB (mobile): cargar tarea rápido */}
       <button
-        onClick={() => openNew(selectedDay ?? tISO)}
+        onClick={() => openNew(tISO)}
         className="sm:hidden fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-[#1478b8] to-brand text-white grid place-items-center shadow-[0_10px_28px_rgba(20,120,184,0.45)] active:scale-95 transition-transform"
         aria-label="Nueva tarea">
         <Plus className="h-6 w-6" strokeWidth={2.6} />
@@ -406,6 +411,47 @@ export function CalendarioView() {
 
       <TareaFormModal open={formOpen} tarea={editing} defaultFecha={formFecha} defaultDeposito={deposito}
         onClose={() => setFormOpen(false)} onSaved={() => { setFormOpen(false); reload(); }} />
+    </div>
+  );
+}
+
+/** Filtro de responsable PRO: botón + popover animado con avatares. */
+function RespFilter({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onEsc);
+    if (menuRef.current && !reduceMotion()) gsap.fromTo(menuRef.current, { opacity: 0, y: -6, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out', transformOrigin: 'top right' });
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
+  }, [open]);
+  return (
+    <div ref={wrapRef} className="relative shrink-0">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className={cn('inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-bold transition-colors',
+          value ? 'border-brand text-brand bg-brand-soft/50' : 'border-border text-ink-2 hover:bg-surface-3', open && 'ring-2 ring-brand/30 border-brand')}>
+        <User className="h-3.5 w-3.5" />
+        <span className="max-w-[110px] truncate">{value || 'Responsable'}</span>
+        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div ref={menuRef} className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[210px] max-h-[280px] overflow-auto rounded-xl border border-border bg-surface shadow-[0_16px_44px_rgba(15,36,64,0.18)] p-1.5">
+          <button type="button" onClick={() => { onChange(''); setOpen(false); }}
+            className={cn('flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-semibold text-left transition-colors', !value ? 'bg-brand-soft text-brand' : 'text-ink-2 hover:bg-surface-3')}>
+            <span className="grid place-items-center h-6 w-6 rounded-full bg-surface-3 text-ink-2 shrink-0"><Users className="h-3.5 w-3.5" /></span> Todos
+          </button>
+          {options.map((r) => (
+            <button key={r} type="button" onClick={() => { onChange(r); setOpen(false); }}
+              className={cn('flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-semibold text-left transition-colors', value === r ? 'bg-brand-soft text-brand' : 'text-ink hover:bg-surface-3')}>
+              <span className="grid place-items-center h-6 w-6 rounded-full bg-brand-soft text-brand text-2xs font-extrabold shrink-0">{r.charAt(0).toUpperCase()}</span>
+              <span className="truncate">{r}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
