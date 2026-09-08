@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, Warehouse, Factory, Building2, Clock, X, ListTodo, Search, User, Users, ChevronDown, CalendarX2, Loader, CheckCircle2, GripVertical, type LucideIcon } from 'lucide-react';
@@ -62,6 +62,10 @@ export function CalendarioView() {
   const listRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const emptyRef = useRef<HTMLDivElement>(null);
+  // FLIP: posiciones previas para animar el reacomodo al mudar/reordenar.
+  const flipFirst = useRef<Map<number, number>>(new Map());
+  const flipPending = useRef(false);
+  const flipMovedId = useRef<number | null>(null);
 
   const cells = useMemo(() => {
     const first = new Date(cursor.y, cursor.m, 1);
@@ -164,6 +168,36 @@ export function CalendarioView() {
     gsap.from(emptyRef.current.children, { opacity: 0, y: 12, scale: 0.96, duration: 0.4, stagger: 0.07, ease: 'back.out(1.6)', clearProps: 'all' });
   }, [listTasks.length, filtersActive, selectedDay, deposito]);
 
+  // Captura posiciones actuales de las filas (paso "First" del FLIP).
+  const flipCapture = (movedId: number | null) => {
+    const m = new Map<number, number>();
+    listRef.current?.querySelectorAll<HTMLElement>('[data-rowid]').forEach((el) => {
+      m.set(Number(el.getAttribute('data-rowid')), el.getBoundingClientRect().top);
+    });
+    flipFirst.current = m; flipPending.current = true; flipMovedId.current = movedId;
+  };
+
+  // FLIP: tras reordenar/mudar, desliza cada fila desde su posición anterior a la nueva.
+  useLayoutEffect(() => {
+    if (!flipPending.current) return;
+    flipPending.current = false;
+    if (reduceMotion()) { flipFirst.current = new Map(); return; }
+    const first = flipFirst.current;
+    const movedId = flipMovedId.current;
+    listRef.current?.querySelectorAll<HTMLElement>('[data-rowid]').forEach((el) => {
+      const id = Number(el.getAttribute('data-rowid'));
+      const prev = first.get(id);
+      if (prev == null) {
+        gsap.fromTo(el, { opacity: 0, y: 14, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: 'back.out(1.6)' });
+        return;
+      }
+      const delta = prev - el.getBoundingClientRect().top;
+      if (Math.abs(delta) > 1) gsap.fromTo(el, { y: delta }, { y: 0, duration: 0.5, ease: 'power3.out' });
+      if (id === movedId) gsap.fromTo(el, { backgroundColor: 'rgba(20,120,184,0.16)' }, { backgroundColor: 'rgba(255,255,255,0)', duration: 0.7, ease: 'power2.out', clearProps: 'background-color', delay: 0.05 });
+    });
+    flipFirst.current = new Map();
+  }, [listTasks]);
+
   const reload = () => setReloadKey((k) => k + 1);
   const goMonth = (delta: number) => setCursor((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
   const goToday = () => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); };
@@ -179,6 +213,7 @@ export function CalendarioView() {
   const moveTarea = async (id: number, fecha: string) => {
     const cur = tareas.find((x) => x.id === id);
     if (!cur || cur.fecha === fecha) return;
+    flipCapture(id); // FLIP: reacomodo suave de las filas que quedan
     setTareas((prev) => prev.map((x) => (x.id === id ? { ...x, fecha } : x)));
     if (!reduceMotion()) requestAnimationFrame(() => {
       const el = gridRef.current?.querySelector(`[data-iso="${fecha}"]`);
@@ -196,11 +231,8 @@ export function CalendarioView() {
     const [moved] = cur.splice(from, 1);
     cur.splice(to, 0, moved!);
     const ordenById = new Map(cur.map((t, i) => [t.id, i]));
+    flipCapture(draggedId); // FLIP: guardar posiciones antes del reacomodo
     setTareas((prev) => prev.map((t) => (ordenById.has(t.id) ? { ...t, orden: ordenById.get(t.id)! } : t)));
-    if (!reduceMotion()) requestAnimationFrame(() => {
-      const el = listRef.current?.querySelector(`[data-rowid="${draggedId}"]`);
-      if (el) gsap.fromTo(el, { backgroundColor: 'rgba(20,120,184,0.14)', scale: 0.98 }, { backgroundColor: 'rgba(255,255,255,0)', scale: 1, duration: 0.5, ease: 'power2.out', clearProps: 'background-color,transform' });
-    });
     for (const [id, orden] of ordenById) { updateTarea(id, { orden }).catch(() => {}); }
   };
 
@@ -407,7 +439,7 @@ export function CalendarioView() {
                   onDrop={(e) => { e.preventDefault(); const id = Number(e.dataTransfer.getData('text/plain')); setOverRow(null); setDragId(null); if (id) reorderTarea(id, t.id); }}
                   onClick={() => openEdit(t)}
                   onKeyDown={(e) => { if (e.key === 'Enter') openEdit(t); }}
-                  className={cn('cal-row group relative flex items-center gap-2 rounded-2xl border bg-surface pl-2 pr-3 py-2.5 cursor-pointer overflow-hidden transition-all hover:border-brand/40 hover:shadow-[0_8px_22px_rgba(20,120,184,0.12)] hover:-translate-y-0.5', overRow === t.id ? 'border-brand ring-2 ring-brand/40' : 'border-border', dragId === t.id && 'opacity-40')}>
+                  className={cn('cal-row group relative flex items-center gap-2 rounded-2xl border bg-surface pl-2 pr-3 py-2.5 cursor-pointer overflow-hidden transition-all hover:border-brand/40 hover:shadow-[0_8px_22px_rgba(20,120,184,0.12)] hover:-translate-y-0.5', overRow === t.id ? 'border-brand ring-2 ring-brand/40 -translate-y-0.5' : 'border-border', dragId === t.id && 'opacity-40 border-dashed border-brand/60 scale-[0.98]')}>
                   <span className={cn('absolute left-0 top-0 bottom-0 w-1.5 group-hover:w-2 transition-all', BAR[k])} />
                   <GripVertical className="shrink-0 h-4 w-4 text-ink-3/40 group-hover:text-brand transition-colors ml-0.5 cursor-grab active:cursor-grabbing" />
                   <span className="shrink-0 grid place-items-center h-6 w-6 rounded-full bg-surface-3 text-ink-3 text-[11px] font-extrabold tabular-nums group-hover:bg-brand group-hover:text-white transition-colors">{idx + 1}</span>
