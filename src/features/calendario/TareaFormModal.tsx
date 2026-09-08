@@ -86,12 +86,12 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
       footer={
         <>
           {tarea && (
-            <button className="btn-ghost mr-auto text-faltante" onClick={remove} disabled={saving}>
+            <button type="button" className="btn-ghost mr-auto text-faltante" onClick={remove} disabled={saving}>
               <Trash2 className="h-4 w-4" /> Eliminar
             </button>
           )}
-          <button className="btn-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button className="btn-primary" onClick={save} disabled={saving}>
+          <button type="button" className="btn-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="button" className="btn-primary" onClick={save} disabled={saving}>
             <Check className="h-4 w-4" strokeWidth={2.5} /> {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </>
