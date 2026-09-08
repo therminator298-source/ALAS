@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Trash2, Clock3, Loader, CheckCircle2, type LucideIcon } from 'lucide-react';
+import { Check, Trash2, Clock3, Loader, CheckCircle2, Warehouse, Factory, Building2, type LucideIcon } from 'lucide-react';
 import gsap from 'gsap';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/toast';
@@ -7,6 +7,10 @@ import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 import { createTarea, updateTarea, deleteTarea } from './calendarioApi';
 import { DEPOSITOS, type Tarea } from './types';
+
+const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const DEP_ICONS: Record<string, LucideIcon> = { 'Depósito Central': Warehouse, 'Fábrica': Factory, 'Depósito Luque Sanber': Building2 };
 
 /** Estados como botones rápidos: un toque cambia y se ve al instante. */
 const ESTADO_BTNS: { value: string; label: string; icon: LucideIcon; on: string; ring: string; dot: string }[] = [
@@ -43,7 +47,8 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
       setResponsable(tarea.responsable ?? ''); setDeposito(tarea.deposito ?? defaultDeposito);
       setPrioridad(tarea.prioridad); setEstado(tarea.estado); setDescripcion(tarea.descripcion ?? '');
     } else {
-      setTitulo(''); setFecha(defaultFecha); setHora(''); setResponsable(''); setDeposito(defaultDeposito);
+      // Nueva tarea: siempre fecha y hora actuales por defecto.
+      setTitulo(''); setFecha(defaultFecha || todayISO()); setHora(nowHM()); setResponsable(''); setDeposito(defaultDeposito);
       setPrioridad('NORMAL'); setEstado('Pendiente'); setDescripcion('');
     }
   }, [open, tarea, defaultFecha, defaultDeposito]);
@@ -103,14 +108,10 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
         <Field label="Estado">
           <EstadoButtons value={estado} onChange={setEstado} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Depósito">
-            <select className="input" value={deposito} onChange={(e) => setDeposito(e.target.value)}>
-              {DEPOSITOS.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </Field>
-          <Field label="Responsable"><input className="input" value={responsable} onChange={(e) => setResponsable(e.target.value)} placeholder="Nombre del responsable" /></Field>
-        </div>
+        <Field label="Depósito">
+          <DepositoButtons value={deposito} onChange={setDeposito} />
+        </Field>
+        <Field label="Responsable"><input className="input" value={responsable} onChange={(e) => setResponsable(e.target.value)} placeholder="Nombre del responsable" /></Field>
         <Field label="Descripción">
           <textarea className="input min-h-[80px] py-2.5 resize-y" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Detalle de la tarea…" />
         </Field>
@@ -152,6 +153,42 @@ function EstadoButtons({ value, onChange }: { value: string; onChange: (v: strin
           >
             <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-white' : b.dot)} strokeWidth={2.4} />
             {b.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Depósitos en grilla PRO con íconos y pop GSAP al seleccionar. */
+function DepositoButtons({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  function pick(v: string) {
+    if (v !== value) onChange(v);
+    const el = refs.current[v];
+    if (!el || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(el, { scale: 0.9 }, { scale: 1, duration: 0.28, ease: 'back.out(3)' });
+    const ic = el.querySelector('svg');
+    if (ic) gsap.fromTo(ic, { scale: 0.6, y: -4 }, { scale: 1, y: 0, duration: 0.34, ease: 'back.out(4)' });
+  }
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {DEPOSITOS.map((d) => {
+        const on = d === value;
+        const Icon = DEP_ICONS[d] ?? Warehouse;
+        return (
+          <button
+            key={d}
+            type="button"
+            ref={(n) => { refs.current[d] = n; }}
+            onClick={() => pick(d)}
+            className={cn(
+              'flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-center transition-colors duration-150 select-none active:scale-[0.97]',
+              on ? 'bg-gradient-to-br from-[#1478b8] to-brand border-brand text-white shadow-sm ring-4 ring-brand/25' : 'border-border bg-surface text-ink-2 hover:bg-surface-3 hover:border-brand/40',
+            )}
+          >
+            <Icon className={cn('h-6 w-6 shrink-0', on ? 'text-white' : 'text-brand')} strokeWidth={1.9} />
+            <span className="text-2xs font-bold leading-tight">{d}</span>
           </button>
         );
       })}
