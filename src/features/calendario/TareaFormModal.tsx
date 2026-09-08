@@ -112,9 +112,11 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
           <Field label="Fecha *"><input type="date" className="input" value={fecha} onChange={(e) => setFecha(e.target.value)} /></Field>
           <Field label="Hora"><input type="time" className="input" value={hora} onChange={(e) => setHora(e.target.value)} /></Field>
         </div>
-        <Field label="Estado">
-          <EstadoButtons value={estado} onChange={setEstado} />
-        </Field>
+        {tarea && (
+          <Field label="Estado">
+            <EstadoButtons value={estado} onChange={setEstado} />
+          </Field>
+        )}
         <Field label="Depósito">
           <DepositoButtons value={deposito} onChange={setDeposito} />
         </Field>
