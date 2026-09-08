@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Trash2, Clock3, Loader, CheckCircle2, Warehouse, Factory, Building2, type LucideIcon } from 'lucide-react';
+import { Check, Trash2, Clock3, Loader, CheckCircle2, Warehouse, Factory, Building2, PackageOpen, PackagePlus, Wrench, Recycle, PenLine, ChevronDown, Tag, type LucideIcon } from 'lucide-react';
 import gsap from 'gsap';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/toast';
@@ -9,8 +9,12 @@ import { createTarea, updateTarea, deleteTarea } from './calendarioApi';
 import { DEPOSITOS, type Tarea } from './types';
 
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-// Tipos de tarea rápidos (grilla). "OTROS" deja escribir un título libre.
+// Tipos de tarea (seleccionador). "OTROS" deja escribir un título libre.
 const TAREA_TIPOS = ['DESCARGA', 'REPOSICIÓN', 'ARREGLO', 'CARGA DE BASURA', 'CARGA DE CHATARRA', 'OTROS'];
+const TIPO_ICONS: Record<string, LucideIcon> = {
+  'DESCARGA': PackageOpen, 'REPOSICIÓN': PackagePlus, 'ARREGLO': Wrench,
+  'CARGA DE BASURA': Trash2, 'CARGA DE CHATARRA': Recycle, 'OTROS': PenLine,
+};
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const DEP_ICONS: Record<string, LucideIcon> = { 'Depósito Central': Warehouse, 'Fábrica': Factory, 'Depósito Luque Sanber': Building2 };
 
@@ -101,8 +105,8 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
     >
       <div className="space-y-4">
         <Field label="Título *">
-          <TipoButtons value={titulo} onPick={setTitulo} />
-          <input className="input mt-2" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Elegí un tipo arriba o escribí…" autoFocus />
+          <TipoSelect value={titulo} onPick={setTitulo} />
+          <input className="input mt-2" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Elegí un tipo arriba o escribí…" />
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Fecha *"><input type="date" className="input" value={fecha} onChange={(e) => setFecha(e.target.value)} /></Field>
@@ -163,30 +167,55 @@ function EstadoButtons({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
-/** Tipos de tarea en grilla compacta; un toque completa el título. */
-function TipoButtons({ value, onPick }: { value: string; onPick: (v: string) => void }) {
-  const v = value.trim().toUpperCase();
+/** Seleccionador PRO de tipo de tarea: botón + popover animado con íconos. */
+function TipoSelect({ value, onPick }: { value: string; onPick: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const sel = TAREA_TIPOS.find((t) => t !== 'OTROS' && t === value.trim().toUpperCase()) || '';
+  const SelIcon = sel ? (TIPO_ICONS[sel] ?? Tag) : Tag;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onEsc);
+    if (menuRef.current && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      gsap.fromTo(menuRef.current, { opacity: 0, y: -8, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.22, ease: 'back.out(2)', transformOrigin: 'top center' });
+      gsap.fromTo(menuRef.current.querySelectorAll('.tipo-opt'), { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.2, stagger: 0.03, ease: 'power2.out', delay: 0.04 });
+    }
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
+  }, [open]);
+
   return (
-    <div className="grid grid-cols-3 gap-1.5">
-      {TAREA_TIPOS.map((tp) => {
-        const on = v === tp;
-        return (
-          <button
-            key={tp}
-            type="button"
-            onClick={(e) => {
-              onPick(tp === 'OTROS' ? '' : tp);
-              if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) gsap.fromTo(e.currentTarget, { scale: 0.85 }, { scale: 1, duration: 0.3, ease: 'back.out(3)' });
-            }}
-            className={cn(
-              'rounded-lg border px-1.5 py-2 text-[11px] font-bold leading-tight text-center transition-colors active:scale-[0.96]',
-              on ? 'bg-gradient-to-br from-[#1478b8] to-brand border-brand text-white shadow-sm' : 'border-border bg-surface text-ink-2 hover:bg-surface-3 hover:border-brand/40',
-            )}
-          >
-            {tp}
-          </button>
-        );
-      })}
+    <div ref={wrapRef} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className={cn('w-full flex items-center justify-between gap-2 h-11 px-3 rounded-xl border text-sm font-bold transition-colors',
+          sel ? 'border-brand bg-brand-soft/40 text-brand' : 'border-border bg-surface text-ink-2 hover:bg-surface-3', open && 'ring-2 ring-brand/30 border-brand')}>
+        <span className="flex items-center gap-2 min-w-0">
+          <span className={cn('grid place-items-center h-6 w-6 rounded-lg shrink-0', sel ? 'bg-gradient-to-br from-[#1478b8] to-brand text-white' : 'bg-surface-3 text-ink-3')}><SelIcon className="h-3.5 w-3.5" /></span>
+          <span className="truncate">{sel || 'Elegí el tipo de tarea'}</span>
+        </span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div ref={menuRef} className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-xl border border-border bg-surface shadow-[0_16px_44px_rgba(15,36,64,0.20)] p-1.5">
+          {TAREA_TIPOS.map((tp) => {
+            const on = tp === sel;
+            const Icon = TIPO_ICONS[tp] ?? Tag;
+            return (
+              <button key={tp} type="button"
+                onClick={() => { onPick(tp === 'OTROS' ? '' : tp); setOpen(false); }}
+                className={cn('tipo-opt flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-semibold text-left transition-colors',
+                  on ? 'bg-brand-soft text-brand' : 'text-ink hover:bg-surface-3')}>
+                <span className={cn('grid place-items-center h-7 w-7 rounded-lg shrink-0', on ? 'bg-gradient-to-br from-[#1478b8] to-brand text-white' : 'bg-surface-3 text-ink-2')}><Icon className="h-4 w-4" /></span>
+                <span className="truncate">{tp === 'OTROS' ? 'Otros (escribir)…' : tp}</span>
+                {on && <Check className="h-4 w-4 ml-auto shrink-0" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
