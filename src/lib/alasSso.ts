@@ -146,6 +146,7 @@ export async function resolveAlasSession(): Promise<AlasSsoPayload | null> {
 }
 
 export function hasModulePermission(payload: AlasSsoPayload, moduleKey = MODULE_KEY): boolean {
+  if (moduleKey === 'calendario' && asString(payload.role).toLowerCase() === 'calendario') return true;
   return payload.permissions.includes(moduleKey);
 }
 
@@ -163,6 +164,7 @@ export function goToLauncher(): void {
 export function mapSsoRole(value: unknown): Role {
   const role = asString(value).toLowerCase();
   if (role === 'admin' || role === 'administrador') return 'ADMIN';
+  if (role === 'calendario') return 'CALENDARIO';
   if (role === 'supervisor' || role === 'jefe_logistica') return 'SUPERVISOR_RECEPCION';
   if (role === 'compras') return 'COMPRAS';
   if (role === 'auditor' || role === 'invitado') return 'AUDITOR';

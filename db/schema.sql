@@ -62,7 +62,8 @@ insert into roles (code, label) values
   ('SUPERVISOR_RECEPCION','Supervisor de Recepción'),
   ('OPERADOR_RECEPCION','Operador de Recepción'),
   ('COMPRAS','Compras'),
-  ('AUDITOR','Auditor')
+  ('AUDITOR','Auditor'),
+  ('CALENDARIO','Calendario tareas')
 on conflict (code) do nothing;
 
 create table if not exists permissions (

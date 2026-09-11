@@ -127,6 +127,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   OPERADOR_RECEPCION: 'Operador de Recepción',
   COMPRAS: 'Compras',
   AUDITOR: 'Auditor',
+  CALENDARIO: 'Calendario tareas',
 };
 
 // ============================================================
@@ -160,4 +161,5 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   AUDITOR: [
     'incident.read', 'report.view', 'report.export', 'audit.view',
   ],
+  CALENDARIO: [],
 };
