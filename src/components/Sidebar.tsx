@@ -43,11 +43,14 @@ function sourceLabel(source: SessionSource): string {
 
 export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProps) {
   const { pathname } = useLocation();
+  const visibleItems = user.rol === 'CALENDARIO'
+    ? SIDEBAR_ITEMS.filter((item) => item.to === '/calendario')
+    : SIDEBAR_ITEMS;
 
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
       <div className="sidebar-icons">
-        {SIDEBAR_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const active = item.match.some((p) => pathname === p || pathname.startsWith(p + '/'));
           return (

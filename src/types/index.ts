@@ -49,7 +49,8 @@ export type Role =
   | 'SUPERVISOR_RECEPCION'
   | 'OPERADOR_RECEPCION'
   | 'COMPRAS'
-  | 'AUDITOR';
+  | 'AUDITOR'
+  | 'CALENDARIO';
 
 export type Permission =
   | 'incident.create'

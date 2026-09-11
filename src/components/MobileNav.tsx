@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, ClipboardList } from 'lucide-react';
+import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 
 const ITEMS = [
@@ -7,8 +8,14 @@ const ITEMS = [
   { to: '/incidents', label: 'Incidencias', icon: ClipboardList, end: false },
 ];
 
+const CALENDAR_ITEMS = [
+  { to: '/calendario', label: 'Calendario', icon: CalendarDays, end: true },
+];
+
 /** Navegación inferior para móvil (oculta en ≥ md). */
 export function MobileNav() {
+  const { user } = useSession();
+  const items = user.rol === 'CALENDARIO' ? CALENDAR_ITEMS : ITEMS;
   const itemCls = ({ isActive }: { isActive: boolean }) =>
     cn(
       'flex flex-col items-center justify-center gap-0.5 text-2xs font-semibold transition-colors',
@@ -16,8 +23,11 @@ export function MobileNav() {
     );
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-surface border-t border-border grid grid-cols-2 pb-[env(safe-area-inset-bottom)]">
-      {ITEMS.map((it) => {
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-surface border-t border-border grid pb-[env(safe-area-inset-bottom)]"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
+      {items.map((it) => {
         const Icon = it.icon;
         return (
           <NavLink key={it.to} to={it.to} className={itemCls} end={it.end}>

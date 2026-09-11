@@ -32,6 +32,10 @@ begin
   end if;
 
   -- Normaliza/valida el rol contra el catálogo; si no existe, cae a operador.
+  insert into roles (code, label)
+  values ('CALENDARIO', 'Calendario tareas')
+  on conflict (code) do nothing;
+
   select code into v_rol from roles where code = coalesce(p_rol, '');
   if v_rol is null then
     v_rol := 'OPERADOR_RECEPCION';

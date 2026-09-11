@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, CornerDownLeft } from 'lucide-react';
+import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 
 interface Command {
@@ -11,12 +12,17 @@ interface Command {
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const { user } = useSession();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commands = useMemo<Command[]>(
-    () => [
+    () => user.rol === 'CALENDARIO'
+      ? [
+        { label: 'Ir a Calendario tareas', hint: 'Navegar', action: () => navigate('/calendario') },
+      ]
+      : [
       { label: 'Nueva incidencia', hint: 'Crear', action: () => navigate('/incidents/new') },
       { label: 'Ir a Pendientes', hint: 'Navegar', action: () => navigate('/incidents/pending') },
       { label: 'Ir a En revisión', hint: 'Navegar', action: () => navigate('/incidents/review') },
@@ -26,7 +32,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       { label: 'Ir a Proveedores', hint: 'Navegar', action: () => navigate('/suppliers') },
       { label: 'Ir a Reportes', hint: 'Navegar', action: () => navigate('/reports') },
     ],
-    [navigate],
+    [navigate, user.rol],
   );
 
   const results = useMemo(() => {
