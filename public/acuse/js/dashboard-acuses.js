@@ -34,6 +34,10 @@
   let dashboardSelectionEffectTimer = null;
   let dashboardSelectionFocusTimer = null;
   const TODAY_ISO = currentDateValue();
+  let chartPromise = null;
+  let kpiPromise = null;
+  let summaryRequestSeq = 0;
+  let calendarRequestSeq = 0;
 
   const state = {
     activeKPI: 'acuses',
@@ -73,6 +77,7 @@
     panelOpenFilter: null,
     panelResponse: null,
     panelRequestSeq: 0,
+    panelLoadingKey: null,
     selectedAcuseId: null,
     highlightedAcuseId: null,
     history: {
@@ -241,6 +246,10 @@
   window.pickHistDateFilter = pickHistDateFilter;
   window.closeAcuseEmbed = closeAcuseEmbed;
   window.showDashboardToast = notify;
+  window.retryDashboardPanel = () => {
+    if (!state.kpiSummary) loadKpiSummary().catch(handleError);
+    return loadPanel(state.activeKPI).catch(handleError);
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDashboardAcuses);
@@ -288,17 +297,18 @@
     initDashboardDatePickers();
     document.title = 'Dashboard Acuses - ALAS';
 
-    try {
-      await Promise.all([
-        loadRepartidoresCatalog(),
-        loadSummary(),
-        loadKpiSummary()
-      ]);
-      await loadPanel(state.activeKPI);
-      await loadCalendarMonth();
-      await showView('dashboard');
-    } catch (error) {
-      handleError(error);
+    // Navigation is available before any database response arrives.
+    window.__acuseDashboardReady = true;
+    const initialView = window.__acuseRequestedView;
+    if (initialView && initialView !== 'acuses' && initialView !== 'repartidores') {
+      showView(initialView).catch(handleError);
+    } else {
+      if (initialView) state.activeKPI = initialView;
+      showView('dashboard').catch(handleError);
+      loadPanel(state.activeKPI).catch(handleError);
+    }
+    if (window.parent !== window) {
+      window.parent.postMessage({ source: 'alas-acuses', action: 'ready' }, location.origin);
     }
   }
 
@@ -793,7 +803,8 @@
   async function showDashboardPanel(kpi = 'acuses') {
     const targetKpi = normalizeDashboardKpi(kpi, { allowRepartidores: true, fallback: 'acuses' });
     const wasDashboard = state.currentView === 'dashboard';
-    const shouldReloadPanel = state.activeKPI !== targetKpi || state.currentView !== 'dashboard';
+    const requestKey = JSON.stringify([targetKpi, buildPanelParams(targetKpi)]);
+    const shouldReloadPanel = state.panelLoadingKey !== requestKey && (!state.panelResponse || state.activeKPI !== targetKpi || state.currentView !== 'dashboard');
     state.activeKPI = targetKpi;
     syncActiveKpiCards();
     syncDashboardChrome();
@@ -842,6 +853,7 @@
   }
 
   async function loadSummary() {
+    const requestSeq = ++summaryRequestSeq;
     syncSummaryPeriodLabel();
     const params = buildSummaryParams();
     const comparisonParams = buildPreviousSummaryParams();
@@ -852,6 +864,8 @@
         : Promise.resolve(null)
     ]);
 
+    if (requestSeq !== summaryRequestSeq) return;
+
     state.summary = summary;
     state.summaryComparison = comparison;
     applySummaryPeriod(state.summary && state.summary.periodo);
@@ -861,12 +875,15 @@
     if (state.currentView === 'resumen') renderChartsEnhanced();
   }
 
-  async function loadKpiSummary() {
-    state.kpiSummary = await AcuseAPI.get('/api/dashboard/interactivo/summary', {
-      scope: 'all',
-      anchor: TODAY_ISO
-    });
-    renderKpis();
+  async function loadKpiSummary(force = false) {
+    if (kpiPromise && !force) return kpiPromise;
+    const request = AcuseAPI.get('/api/dashboard/interactivo/kpis').then((response) => {
+      if (kpiPromise !== request) return;
+      state.kpiSummary = response;
+      renderKpis();
+    }).finally(() => { if (kpiPromise === request) kpiPromise = null; });
+    kpiPromise = request;
+    return request;
   }
 
   function syncSummaryPeriodLabel() {
@@ -938,11 +955,8 @@
   }
 
   function renderKpis() {
-    const kpis = state.kpiSummary && state.kpiSummary.kpis
-      ? state.kpiSummary.kpis
-      : state.summary && state.summary.kpis
-        ? state.summary.kpis
-        : {};
+    if (!state.kpiSummary) return;
+    const kpis = state.kpiSummary.kpis || {};
     setText('val-pendientes', formatNumber(kpis.pendientes || 0));
     setText('val-entregados', formatNumber(kpis.entregados || 0));
     setText('val-acuses', formatNumber(kpis.acuses || 0));
@@ -1277,9 +1291,36 @@
       const msg = document.createElement('p');
       msg.className = 'chart-unavailable';
       msg.style.cssText = 'text-align:center;font-size:12px;color:var(--gray-400);padding:20px 8px;margin:0';
-      msg.textContent = 'Gráficas no disponibles (sin conexión)';
+      msg.innerHTML = 'Gráficas no disponibles. <button type="button" onclick="showView(\'resumen\')">Reintentar</button>';
       wrap.appendChild(msg);
     });
+  }
+
+  function ensureCharts() {
+    if (window.Chart) return Promise.resolve();
+    if (chartPromise) return chartPromise;
+    chartPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      const timeout = setTimeout(fail, 12000);
+      function fail() {
+        clearTimeout(timeout);
+        script.onload = script.onerror = null;
+        script.remove();
+        window.__chartJsFailed = true;
+        reject(new Error('No se pudieron cargar las graficas.'));
+      }
+      script.src = '/acuse/vendor/chart.umd.js';
+      script.onload = () => {
+        if (!window.Chart) return fail();
+        clearTimeout(timeout);
+        window.__chartJsFailed = false;
+        document.querySelectorAll('.chart-unavailable').forEach(node => node.remove());
+        resolve();
+      };
+      script.onerror = fail;
+      document.head.appendChild(script);
+    }).catch(error => { chartPromise = null; throw error; });
+    return chartPromise;
   }
 
   function renderChartsEnhanced() {
@@ -1734,6 +1775,7 @@
           <div class="dash-pro-loader__core" style="box-shadow: inset 0 0 0 2px rgba(239,68,68,0.14); border: 2px solid rgba(239,68,68,0.08);"></div>
         </div>
         <div>${escapeHtml(message || 'No se pudo cargar el panel.')}</div>
+        <button type="button" class="btn-action" onclick="retryDashboardPanel()">Reintentar</button>
       </div>
     `;
   }
@@ -1791,6 +1833,7 @@
 
     const params = buildPanelParams(normalizedKpi);
     const requestSeq = ++state.panelRequestSeq;
+    state.panelLoadingKey = JSON.stringify([normalizedKpi, params]);
 
     try {
       const response = await fetchPanelResponse(normalizedKpi, params);
@@ -1808,6 +1851,8 @@
         }
       }
       throw error;
+    } finally {
+      if (requestSeq === state.panelRequestSeq) state.panelLoadingKey = null;
     }
   }
 
@@ -1815,11 +1860,11 @@
     const refreshHistory = options.history === true || state.currentView === 'historial';
     const softPanel = options.softPanel !== false;
     const tasks = [
-      { key: 'summary', run: () => loadSummary() },
-      { key: 'kpis', run: () => loadKpiSummary() },
+      { key: 'kpis', run: () => loadKpiSummary(true) },
       { key: 'panel', run: () => loadPanel(state.activeKPI, { soft: softPanel }) },
-      { key: 'calendar', run: () => loadCalendarMonth() }
     ];
+    if (state.summary || state.currentView === 'resumen') tasks.push({ key: 'summary', run: () => loadSummary() });
+    if (state.calendar.monthResponse || state.currentView === 'calendario') tasks.push({ key: 'calendar', run: () => loadCalendarMonth() });
 
     if (refreshHistory) {
       tasks.push({ key: 'history', run: () => loadHistorial() });
@@ -1950,7 +1995,7 @@
         <div class="panel-badge" style="background:${cfg.bg};color:${cfg.color}">${badgeText}</div>
         ${panelDateFilterHTML(kpi)}
         ${panelEntityFilterHTML(kpi)}
-        <button class="btn-action btn-clear-filters btn-clear-filters--inline" type="button" onclick="clearCurrentPanelFilters(this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m14.356 2A8 8 0 005.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 016.343 15m13.076 0H15"/></svg><span class="btn-action__label">Limpiar filtros</span></button>
+        <button class="btn-action btn-clear-filters btn-clear-filters--inline" type="button" aria-label="Limpiar filtros" title="Limpiar filtros" onclick="clearCurrentPanelFilters(this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m14.356 2A8 8 0 005.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 016.343 15m13.076 0H15"/></svg><span class="btn-action__label">Limpiar filtros</span></button>
       </div>
       ${actionsHtml}
     </div>`;
@@ -2244,6 +2289,7 @@
       const response = await AcuseAPI.get('/api/clientes', { q: query, limit: 12 });
       state.panelFilterResults.cliente = response.items || [];
     } else {
+      await loadRepartidoresCatalog();
       const needle = String(query || '').trim().toLowerCase();
       state.panelFilterResults.repartidor = state.repartidoresCatalog.filter((item) => {
         const text = `${item.Nombre_Repartidor || ''} ${item.Codigo_Repartidor || ''}`.toLowerCase();
@@ -2700,6 +2746,9 @@
     }
 
     state.currentView = view;
+    const navView = view === 'dashboard' ? (state.activeKPI === 'repartidores' ? 'repartidores' : 'acuses') : view;
+    window.mob_syncFromState?.(navView);
+    if (window.parent !== window) window.parent.postMessage({ source: 'alas-acuses', action: 'view', view: navView }, location.origin);
     saveDashboardState();
 
     ['viewResumen', 'viewDashboard', 'viewCalendario', 'viewHistorial'].forEach((id) => {
@@ -2715,8 +2764,12 @@
       node.style.display = 'flex';
       syncSidebarActiveState();
       playViewEntrance(node);
-      renderSummaryCardsEnhanced();
-      renderChartsEnhanced();
+      if (state.summary) renderSummaryCardsEnhanced();
+      // Charts are optional: their download must not hold up the summary data.
+      ensureCharts().then(() => {
+        if (state.currentView === 'resumen' && state.summary) renderChartsEnhanced();
+      }).catch(() => showChartUnavailableMessage());
+      await loadViewData(node, () => loadSummary());
       return;
     }
 
@@ -2726,7 +2779,10 @@
       syncSidebarActiveState();
       syncDashboardChrome();
       playViewEntrance(node);
-      if (!window._alasEntered && window.ALASTransition) { window._alasEntered = true; ALASTransition.enterProject(); }
+      if (!state.kpiSummary && state.activeKPI !== 'repartidores') {
+        ['pendientes', 'entregados', 'acuses', 'en_transito', 'anulados'].forEach(key => setText(`val-${key}`, '...'));
+        loadKpiSummary().catch(handleError);
+      }
       return;
     }
 
@@ -2735,7 +2791,7 @@
       node.style.display = 'block';
       syncSidebarActiveState();
       playViewEntrance(node);
-      await loadCalendarMonth();
+      await loadViewData(node, () => loadCalendarMonth());
       if (state.calendar.selectedDate) {
         await loadCalendarDayDetail(state.calendar.selectedDate);
       } else {
@@ -2749,13 +2805,40 @@
       node.style.display = 'block';
       syncSidebarActiveState();
       playViewEntrance(node);
-      await loadHistorial();
+      await loadViewData(node, () => loadHistorial());
+    }
+  }
+
+  async function loadViewData(node, load) {
+    node.querySelector('.acuse-view-status')?.remove();
+    const status = document.createElement('div');
+    status.className = 'acuse-view-status';
+    status.setAttribute('role', 'status');
+    status.textContent = 'Cargando...';
+    node.prepend(status);
+    node.setAttribute('aria-busy', 'true');
+    try {
+      await load();
+      if (status.isConnected) node.removeAttribute('aria-busy');
+      status.remove();
+    } catch (error) {
+      if (!status.isConnected) return;
+      node.removeAttribute('aria-busy');
+      status.setAttribute('role', 'alert');
+      status.textContent = 'No se pudieron cargar los datos. ';
+      const retry = document.createElement('button');
+      retry.type = 'button'; retry.textContent = 'Reintentar';
+      retry.onclick = () => loadViewData(node, load);
+      status.appendChild(retry);
     }
   }
 
   async function loadCalendarMonth() {
+    const requestSeq = ++calendarRequestSeq;
     syncCalendarScopeButton();
-    state.calendar.monthResponse = await AcuseAPI.get('/api/dashboard/interactivo/calendar', buildCalendarParams());
+    const response = await AcuseAPI.get('/api/dashboard/interactivo/calendar', buildCalendarParams());
+    if (requestSeq !== calendarRequestSeq) return;
+    state.calendar.monthResponse = response;
     applyCalendarPeriod(state.calendar.monthResponse);
     if (!isCalendarDateVisible(state.calendar.selectedDate)) {
       resetCalendarSelection(false);

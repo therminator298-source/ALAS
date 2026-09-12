@@ -9,6 +9,21 @@ function extOf(name: string): string {
   return m && m[1] ? m[1].toLowerCase() : 'bin';
 }
 
+/** Lista las evidencias (fotos/archivos) de una incidencia, más recientes primero. */
+export async function listEvidences(incidentId: string): Promise<IncidentEvidence[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('incident_evidences')
+    .select('*,user:users!incident_evidences_uploaded_by_fkey(nombre)')
+    .eq('incident_id', incidentId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, unknown>) => {
+    const u = r.user as { nombre?: string } | null;
+    return { ...(r as unknown as IncidentEvidence), uploaded_by_nombre: u?.nombre ?? '' };
+  });
+}
+
 /** Sube un archivo al bucket y registra la evidencia vía RPC (valida permiso + audita). */
 export async function uploadEvidence(
   actorId: string,

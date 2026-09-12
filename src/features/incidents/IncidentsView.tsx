@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { Plus, Search, X, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList } from 'lucide-react';
+import { Plus, Search, X, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Camera, Clock, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { SegStrip, type SegItem } from '@/components/SegStrip';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ReasonBadge } from '@/components/ui/ReasonBadge';
 import { PriorityBadge } from '@/components/ui/PriorityBadge';
@@ -11,6 +12,7 @@ import { SkeletonTable } from '@/components/ui/SkeletonTable';
 import { listIncidents, type IncidentFilters } from '@/services/incidents';
 import { PRIMARY_REASONS, REASON_LABELS } from '@/config/constants';
 import { fmtAge, fmtDateTime, cn } from '@/lib/utils';
+import { PhotoModal } from './PhotoModal';
 import type { Incident, IncidentReason, IncidentStatus } from '@/types';
 
 type SortKey = 'created_at' | 'supplier_nombre' | 'status' | 'age';
@@ -37,6 +39,13 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
   const [reason, setReason] = useState<IncidentReason | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'created_at', dir: 'desc' });
 
+  // Segmentado Pendientes / Verificados (solo cuando la vista no tiene estado fijo)
+  const [segStatus, setSegStatus] = useState<IncidentStatus>('PENDIENTE');
+  const [counts, setCounts] = useState<{ PENDIENTE: number; VERIFICADO: number }>({ PENDIENTE: 0, VERIFICADO: 0 });
+  const [photoFor, setPhotoFor] = useState<Incident | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const effectiveStatus = fixedStatus ?? segStatus;
+
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
   // Debounce búsqueda (sección 54)
@@ -45,13 +54,13 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => setPage(1), [debounced, reason, fixedStatus]);
+  useEffect(() => setPage(1), [debounced, reason, effectiveStatus]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     const filters: IncidentFilters = {
-      status: fixedStatus,
+      status: effectiveStatus,
       reason: reason ?? undefined,
       search: debounced || undefined,
     };
@@ -65,7 +74,23 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
     return () => {
       alive = false;
     };
-  }, [fixedStatus, reason, debounced, page]);
+  }, [effectiveStatus, reason, debounced, page, refreshKey]);
+
+  // Contadores del segmentado (Pendientes / Verificados) — solo si no hay estado fijo
+  useEffect(() => {
+    if (fixedStatus) return;
+    let alive = true;
+    Promise.all([
+      listIncidents({ status: 'PENDIENTE' }, 1, 1),
+      listIncidents({ status: 'VERIFICADO' }, 1, 1),
+    ]).then(([p, v]) => {
+      if (!alive) return;
+      setCounts({ PENDIENTE: p.total, VERIFICADO: v.total });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [fixedStatus, refreshKey]);
 
   const sorted = useMemo(() => {
     const arr = [...rows];
@@ -120,6 +145,20 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
           </button>
         }
       />
+
+      {/* Segmentado Pendientes / Verificados (estilo filtro de Calendario) */}
+      {!fixedStatus && (
+        <div className="flex justify-center mb-4">
+          <SegStrip
+            items={[
+              { value: 'PENDIENTE', label: 'Pendientes', icon: Clock, count: counts.PENDIENTE },
+              { value: 'VERIFICADO', label: 'Verificados', icon: ShieldCheck, count: counts.VERIFICADO },
+            ] satisfies SegItem[]}
+            value={segStatus}
+            onChange={(v) => setSegStatus(v as IncidentStatus)}
+          />
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -188,6 +227,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
                 <Th>Prioridad</Th>
                 <Th className="text-right">Unidades</Th>
                 <Th sortKey="age" sort={sort} onSort={toggleSort} className="text-right">Antigüedad</Th>
+                <Th className="text-center">Foto</Th>
                 <Th sortKey="status" sort={sort} onSort={toggleSort}>Estado</Th>
               </tr>
             </thead>
@@ -208,6 +248,22 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
                     <td className="px-4"><PriorityBadge priority={i.priority} /></td>
                     <td className="px-4 text-right font-mono font-semibold tabular-nums">{i.affected_units ?? '—'}</td>
                     <td className="px-4 text-right text-ink-2 tabular-nums whitespace-nowrap">{fmtAge(i.created_at)}</td>
+                    <td className="px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => setPhotoFor(i)}
+                        title="Ver / agregar foto de evidencia"
+                        className={cn(
+                          'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-bold transition-colors',
+                          i.evidences_count
+                            ? 'bg-brand-soft text-brand border-brand/30 hover:bg-brand hover:text-white'
+                            : 'bg-surface text-ink-3 border-border hover:border-brand hover:text-brand',
+                        )}
+                      >
+                        <Camera className="h-4 w-4" strokeWidth={2} />
+                        {i.evidences_count ? <span className="tabular-nums">{i.evidences_count}</span> : 'Foto'}
+                      </button>
+                    </td>
                     <td className="px-4"><StatusBadge status={i.status} /></td>
                   </tr>
                 ))}
@@ -215,7 +271,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
           </table>
         </div>
 
-        {loading && <SkeletonTable rows={8} cols={9} />}
+        {loading && <SkeletonTable rows={8} cols={10} />}
         {!loading && sorted.length === 0 && (
           <EmptyState
             icon={ClipboardList}
@@ -261,6 +317,14 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
           </div>
         )}
       </div>
+
+      <PhotoModal
+        open={!!photoFor}
+        incidentId={photoFor?.id ?? null}
+        incidentNumber={photoFor?.incident_number}
+        onClose={() => setPhotoFor(null)}
+        onChanged={() => setRefreshKey((k) => k + 1)}
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@
 <script src="/acuse/js/ui-protection.js?v=20260428-1" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="/acuse/css/date-picker-pro.css?v=20260428-1" rel="stylesheet">
 <link href="/acuse/css/alas-motion.css" rel="stylesheet">
 <link href="/acuse/css/dashboard-acuses.css?v=20260511-2" rel="stylesheet">
@@ -151,7 +151,7 @@
       <div class="kpi-icon">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       </div>
-      <div class="kpi-value" id="val-pendientes">128</div>
+      <div class="kpi-value" id="val-pendientes">...</div>
       <div class="kpi-label">Pendientes</div>
     </div>
 
@@ -159,7 +159,7 @@
       <div class="kpi-icon">
         <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M9 4.75h6" stroke-linecap="round"/><path d="M7.75 7.5h8.5" stroke-linecap="round"/><path d="M9 10.25v6.5" stroke-linecap="round"/><path d="M12 10.25v6.5" stroke-linecap="round"/><path d="M15 10.25v6.5" stroke-linecap="round"/><path d="M8.75 19.25h6.5a1.5 1.5 0 001.49-1.325l.95-8.925h-11.88l.95 8.925a1.5 1.5 0 001.49 1.325z" stroke-linejoin="round" stroke-linecap="round"/></svg>
       </div>
-      <div class="kpi-value" id="val-anulados">0</div>
+      <div class="kpi-value" id="val-anulados">...</div>
       <div class="kpi-label">Anulados</div>
     </div>
 
@@ -167,7 +167,7 @@
       <div class="kpi-icon">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       </div>
-      <div class="kpi-value" id="val-entregados">342</div>
+      <div class="kpi-value" id="val-entregados">...</div>
       <div class="kpi-label">Entregados</div>
     </div>
 
@@ -175,7 +175,7 @@
       <div class="kpi-icon">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
       </div>
-      <div class="kpi-value" id="val-en_transito">87</div>
+      <div class="kpi-value" id="val-en_transito">...</div>
       <div class="kpi-label">En Tránsito</div>
     </div>
 
@@ -183,7 +183,7 @@
       <div class="kpi-icon">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
       </div>
-      <div class="kpi-value" id="val-acuses">559</div>
+      <div class="kpi-value" id="val-acuses">...</div>
       <div class="kpi-label">Total de Acuses</div>
     </div>
   </div>
@@ -326,26 +326,12 @@
   </svg>
 </button>
 
-<!-- ═══ ALASTransition — sincrónico antes del primer paint ═══ -->
 <script src="/acuse/js/alas-transition.js"></script>
-<script>
-  ALASTransition.init({ root: '.layout' });
-  setTimeout(function () {
-    if (!window._alasEntered && window.ALASTransition) {
-      window._alasEntered = true;
-      ALASTransition.enterProject();
-    }
-  }, 2500);
-</script>
-
-<!-- Chart.js primero: los scripts siguientes dependen de window.Chart -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
-  onerror="window.__chartJsFailed=true"></script>
-<script src="/acuse/js/acuse-api.js?v=20260430-2"></script>
+<script src="/acuse/js/acuse-api.js?v=20260912-1"></script>
 <script src="/acuse/js/shared/alas-shared.js?v=20260512-1"></script>
 <script src="/acuse/js/storage-utils.js?v=20260511-1"></script>
 <script src="/acuse/js/date-picker-pro.js?v=20260428-1"></script>
-<script src="/acuse/js/dashboard-acuses.js?v=20260511-2"></script>
+<script src="/acuse/js/dashboard-acuses.js?v=20260912-1"></script>
 <script src="/acuse/js/dashboard-mobile.js?v=20260428-1"></script>
 </body>
 </html>

@@ -2520,3 +2520,47 @@ tr.acuse-row-new::after {
   tr.acuse-row-new > td        { animation: none; }
   tr.acuse-row-new::after      { display: none; }
 }
+
+.acuse-view-status {
+  padding: 10px 12px;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+.acuse-view-status button,
+.chart-unavailable button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: white;
+  color: var(--primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .acuse-embedded .canvas { padding: 12px !important; }
+  .acuse-embedded .canvas.no-scroll { overflow-y: auto; }
+  .acuse-embedded #viewDashboard { flex: 0 0 auto; min-height: 100%; }
+  .acuse-embedded #contentPanel { flex: 1 0 auto; }
+  .acuse-embedded .header { gap: 8px; margin-bottom: 12px; }
+  .acuse-embedded .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+  .acuse-embedded .kpi-card { padding: 10px; border-radius: 8px; }
+  .acuse-embedded .kpi-icon { width: 28px; height: 28px; margin-bottom: 6px; }
+  .acuse-embedded .kpi-icon svg { width: 16px; height: 16px; }
+  .acuse-embedded .kpi-value { font-size: 20px; }
+  .acuse-embedded .kpi-label { font-size: 10px; letter-spacing: 0; overflow-wrap: anywhere; }
+  .acuse-embedded .panel-header { padding: 12px; }
+  .acuse-embedded .panel-header-left,
+  .acuse-embedded .panel-header-right { width: 100%; min-width: 0; gap: 8px; }
+  .acuse-embedded .panel-header-left { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .acuse-embedded .panel-title { font-size: 15px; }
+  .acuse-embedded .filter-wrap { min-width: 0; max-width: 100%; }
+  .acuse-embedded .filter-wrap--date-pro { grid-row: 2; grid-column: 1; }
+  .acuse-embedded .filter-wrap--entity { grid-row: 3; grid-column: 1 / -1; }
+  .acuse-embedded .btn-clear-filters--inline { grid-row: 2; grid-column: 2; justify-self: end; width: 44px; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; }
+  .acuse-embedded .btn-clear-filters--inline .btn-action__label { display: none; }
+  .acuse-embedded .panel-header-right { flex-wrap: nowrap; }
+  .acuse-embedded .panel-header-right .btn-action { flex: 1; min-width: 0; min-height: 44px; padding: 0 8px; justify-content: center; }
+  .acuse-embedded #viewDashboard .content-panel .table-wrapper { min-height: 240px; overflow-x: auto; }
+}

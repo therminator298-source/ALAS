@@ -30,6 +30,7 @@
         (React) controle la navegación por postMessage. El main sidebar del shell
         actúa de switcher de módulos; este módulo pone su nav arriba. ── */
   if (P.get('embed') === '1') {
+    document.documentElement.classList.add('acuse-embedded');
     var _st = document.createElement('style');
     _st.textContent = [
       '.sidebar-wave{display:none!important}',
@@ -38,19 +39,19 @@
       '.layout{background:transparent!important;padding:0!important;min-height:0!important}',
       '.dashboard-card{background:transparent!important;box-shadow:none!important;border-radius:0!important;height:100vh!important;max-height:100vh!important}',
       '.canvas-wrapper{margin-left:0!important;background:transparent!important}',
-      '.canvas{padding-top:14px!important}'
+      '.canvas{padding-top:14px!important}',
+      '.mob-tab-bar,.mob-fab{display:none!important}'
     ].join('');
     (document.head || document.documentElement).appendChild(_st);
     window.addEventListener('message', function (ev) {
+      if (ev.origin !== location.origin || ev.source !== window.parent) return;
       var d = ev.data; if (!d || d.source !== 'alas-parent' || d.action !== 'nav') return;
-      var v = d.view, tries = 0;
-      (function go() {
-        var done = false;
-        if (v === 'acuses' && window.showDashboardPanel) { window.showDashboardPanel('acuses'); done = true; }
-        else if (v === 'repartidores' && window.showDashboardPanel) { window.showDashboardPanel('repartidores'); done = true; }
-        else if ((v === 'resumen' || v === 'calendario' || v === 'historial') && window.showView) { window.showView(v); done = true; }
-        if (!done && tries++ < 25) setTimeout(go, 150);
-      })();
+      if (['acuses', 'repartidores', 'resumen', 'calendario', 'historial'].indexOf(d.view) < 0) return;
+      window.__acuseRequestedView = d.view;
+      if (!window.__acuseDashboardReady) return;
+      var navigation = d.view === 'acuses' || d.view === 'repartidores'
+        ? window.showDashboardPanel(d.view) : window.showView(d.view);
+      Promise.resolve(navigation).catch(function (error) { window.showDashboardToast(error.message, 'error'); });
     });
   }
 
@@ -59,8 +60,19 @@
     return new Promise(function (res, rej) {
       if (window.supabase && window.supabase.createClient) return res();
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      s.onload = res; s.onerror = function () { rej(new Error('No se pudo cargar supabase-js')); };
+      var timeout = setTimeout(fail, 12000);
+      function fail() {
+        clearTimeout(timeout);
+        s.onload = s.onerror = null;
+        s.remove();
+        rej(new Error('No se pudo conectar. Volve a intentar.'));
+      }
+      s.src = '/acuse/vendor/supabase.js';
+      s.onload = function () {
+        if (!window.supabase || !window.supabase.createClient) return fail();
+        clearTimeout(timeout); res();
+      };
+      s.onerror = fail;
       document.head.appendChild(s);
     });
   }
@@ -70,7 +82,7 @@
       if (!CFG.url || !CFG.key) return null;
       await loadSupabase();
       return window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: false } });
-    })();
+    })().catch(function (error) { _clientPromise = null; throw error; });
     return _clientPromise;
   }
 
@@ -83,10 +95,16 @@
   function cacheClear(k) { if (k) delete _cache[k]; else _cache = {}; }
 
   // Repartidores: cambian poco → cache 60s, compartido por todas las vistas.
+  var _repsPromise = null;
   async function getReps(client) {
     var c = cacheGet('reps', 60000); if (c) return c;
-    var r = await client.from('repartidores').select('id,codigo,nombre,activo').order('nombre');
-    return cacheSet('reps', r.data || []);
+    if (_repsPromise) return _repsPromise;
+    _repsPromise = (async function () {
+      var r = await client.from('repartidores').select('id,codigo,nombre,activo').order('nombre');
+      if (r.error) throw httpError(500, r.error.message);
+      return cacheSet('reps', r.data || []);
+    })().finally(function () { _repsPromise = null; });
+    return _repsPromise;
   }
   async function repCount(client) { return (await getReps(client)).filter(function (x) { return x.activo; }).length; }
 
@@ -369,8 +387,12 @@
   }
   async function resolveSummaryPeriod(client, q) {
     if (String(q.scope || '').toLowerCase() === 'all') {
-      var mm = await client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: true }).limit(1);
-      var xx = await client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: false }).limit(1);
+      var edges = await Promise.all([
+        client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: true }).limit(1),
+        client.from('acuses').select('fecha_emision').eq('activo', true).order('fecha_emision', { ascending: false }).limit(1)
+      ]);
+      var mm = edges[0], xx = edges[1];
+      if (mm.error || xx.error) throw httpError(500, (mm.error || xx.error).message);
       var now = new Date();
       var start = (mm.data && mm.data[0]) ? mm.data[0].fecha_emision : monthRange(now.getFullYear(), now.getMonth() + 1).start;
       var end = (xx.data && xx.data[0]) ? xx.data[0].fecha_emision : ymd(now);
@@ -382,7 +404,25 @@
 
   async function fetchRange(client, fromISO, toISO) {
     var r = await client.from('acuses').select('fecha_emision,estado,zona,cliente_ciudad,activo').gte('fecha_emision', fromISO).lte('fecha_emision', toISO).limit(20000);
+    if (r.error) throw httpError(500, r.error.message);
     return r.data || [];
+  }
+
+  async function kpisFn(client) {
+    var kpis = { pendientes: 0, entregados: 0, acuses: 0, en_transito: 0, anulados: 0 };
+    var offset = 0, rows;
+    do {
+      var result = await client.from('acuses').select('estado,activo').order('id').range(offset, offset + 999);
+      if (result.error) throw httpError(500, result.error.message);
+      rows = result.data || [];
+      rows.forEach(function (row) {
+        var key = Number(row.activo) === 0 ? 'anulado' : estadoUiKey(row.estado);
+        var field = { pendiente: 'pendientes', entregado: 'entregados', en_transito: 'en_transito', anulado: 'anulados' }[key];
+        kpis[field]++; kpis.acuses++;
+      });
+      offset += rows.length;
+    } while (rows.length === 1000);
+    return { kpis: kpis };
   }
 
   async function summaryFn(client, q) {
@@ -464,6 +504,7 @@
     query = query.order('fecha_emision', { ascending: false }).limit(5000);
     var qr = await Promise.all([query, getReps(client)]);
     var res = qr[0], reps = qr[1];
+    if (res.error) throw httpError(500, res.error.message);
     var repMap = {}; reps.forEach(function (r) { repMap[r.id] = r.codigo; });
     var all = (res.data || []).filter(function (r) { return kpiMatch(kpi, r); });
     var fetchAll = ['1', 'true', 'all'].indexOf(String(q.all || '').toLowerCase()) >= 0;
@@ -551,6 +592,7 @@
     // dashboard interactivo
     if (path.indexOf('/api/dashboard/interactivo') === 0) {
       var sub = path.replace('/api/dashboard/interactivo', '');
+      if (sub === '/kpis') return kpisFn(client);
       if (sub === '/summary') return summaryFn(client, query);
       if (sub === '/calendar') return calendarFn(client, query);
       if (sub === '/repartidores') return repartidoresFn(client, query);
