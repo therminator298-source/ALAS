@@ -219,7 +219,6 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-3 border-b border-border text-left">
-                <Th>ID</Th>
                 <Th sortKey="created_at" sort={sort} onSort={toggleSort}>Fecha</Th>
                 <Th sortKey="supplier_nombre" sort={sort} onSort={toggleSort}>Proveedor</Th>
                 <Th>Factura</Th>
@@ -240,7 +239,6 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
                     onClick={() => navigate(`/incidents/${i.incident_number}`)}
                     className="h-[52px] hover:bg-surface-3 cursor-pointer transition-colors"
                   >
-                    <td className="px-4 font-mono text-xs font-bold text-ink whitespace-nowrap">{i.incident_number}</td>
                     <td className="px-4 text-ink-2 whitespace-nowrap">{fmtDateTime(i.created_at)}</td>
                     <td className="px-4 font-semibold text-ink max-w-[220px] truncate">{i.supplier_nombre ?? '—'}</td>
                     <td className="px-4 font-mono text-xs text-ink-2 whitespace-nowrap">{i.invoice_number ?? '—'}</td>
@@ -271,7 +269,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
           </table>
         </div>
 
-        {loading && <SkeletonTable rows={8} cols={10} />}
+        {loading && <SkeletonTable rows={8} cols={9} />}
         {!loading && sorted.length === 0 && (
           <EmptyState
             icon={ClipboardList}
