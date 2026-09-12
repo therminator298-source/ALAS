@@ -3,7 +3,7 @@ import {
   BarChart3, ClipboardCheck, CalendarDays, Users, Clock, type LucideIcon,
 } from 'lucide-react';
 import { useSession } from '@/store/session';
-import { cn } from '@/lib/utils';
+import { SegStrip } from '@/components/SegStrip';
 
 // Proyecto Supabase de Acuses. La anon key es pública por diseño (RLS anon, gate = SSO).
 const ACUSE_SB_URL = 'https://fdcumrdbnrjpbfbrxqiw.supabase.co';
@@ -73,21 +73,23 @@ export function AcusesView() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header del módulo Acuses — título a la izquierda, tabs centrados */}
-      <div className="shrink-0 border-b border-border bg-surface px-3 md:px-5 py-2 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Header del módulo Acuses — título a la izquierda, tabs (segmentado) centrados */}
+      <div className="shrink-0 border-b border-border bg-surface px-3 md:px-5 py-2.5 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0 md:flex-1">
           <ClipboardCheck className="h-5 w-5 text-brand shrink-0" strokeWidth={2.2} />
           <h1 className="text-base font-bold text-ink">Acuses</h1>
         </div>
         <select aria-label="Vista de Acuses" value={active} onChange={event => go(event.target.value)} className="md:hidden input h-11 text-base flex-1 min-w-0 max-w-[240px] ml-auto">
           {TABS.map(tab => <option key={tab.v} value={tab.v}>{tab.label}</option>)}
         </select>
-        <div role="tablist" aria-label="Vistas de Acuses" className="hidden md:flex flex-1 flex-wrap justify-end gap-1">
-          {TABS.map(tab => <button key={tab.v} type="button" role="tab" aria-selected={active === tab.v} onClick={() => go(tab.v)}
-            className={cn('inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold', active === tab.v ? 'bg-brand text-white' : 'text-ink-2 hover:bg-surface-3')}>
-            <tab.icon className="h-4 w-4 shrink-0" />{tab.label}
-          </button>)}
+        <div className="hidden md:flex md:justify-center shrink-0">
+          <SegStrip
+            items={TABS.map(tab => ({ value: tab.v, label: tab.label, icon: tab.icon }))}
+            value={active}
+            onChange={go}
+          />
         </div>
+        <div className="hidden md:block md:flex-1" />
       </div>
 
       {/* App ACUSE embebida */}
