@@ -150,6 +150,8 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
       {!fixedStatus && (
         <div className="flex justify-center mb-4">
           <SegStrip
+            size="lg"
+            inline
             items={[
               { value: 'PENDIENTE', label: 'Pendientes', icon: Clock, count: counts.PENDIENTE },
               { value: 'VERIFICADO', label: 'Verificados', icon: ShieldCheck, count: counts.VERIFICADO },
