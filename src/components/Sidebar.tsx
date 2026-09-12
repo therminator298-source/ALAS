@@ -31,9 +31,9 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: 'Acuses', to: '/acuses', icon: FileText, match: ['/acuses'] },
   {
     label: 'Incidencias de recepción',
-    to: '/dashboard',
+    to: '/incidents',
     icon: ClipboardList,
-    match: ['/dashboard', '/incidents', '/reports', '/suppliers', '/products', '/audit'],
+    match: ['/incidents', '/dashboard', '/reports', '/suppliers', '/products', '/audit'],
   },
 ];
 

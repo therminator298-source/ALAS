@@ -16,7 +16,7 @@ import { useSession } from '@/store/session';
 
 function HomeRedirect() {
   const { user } = useSession();
-  return <Navigate to={user.rol === 'CALENDARIO' ? '/calendario' : '/dashboard'} replace />;
+  return <Navigate to={user.rol === 'CALENDARIO' ? '/calendario' : '/incidents'} replace />;
 }
 
 function ReceptionRouteGuard() {
