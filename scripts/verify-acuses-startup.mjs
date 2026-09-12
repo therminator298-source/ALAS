@@ -197,7 +197,6 @@ const browser = await chromium.launch();
 try {
   await measure(browser, 1440, 900);
   await measure(browser, 390, 844);
-  if (process.argv.includes('--smoke')) process.exitCode = 0;
   if (!baseline && !process.argv.includes('--smoke')) {
     await verifyNavigation(browser, 1440);
     await verifyNavigation(browser, 390);
