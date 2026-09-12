@@ -139,28 +139,26 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
       <PageHeader
         title={title}
         subtitle={subtitle}
+        center={
+          !fixedStatus ? (
+            <SegStrip
+              size="lg"
+              inline
+              items={[
+                { value: 'PENDIENTE', label: 'Pendientes', icon: Clock, count: counts.PENDIENTE },
+                { value: 'VERIFICADO', label: 'Verificados', icon: ShieldCheck, count: counts.VERIFICADO },
+              ] satisfies SegItem[]}
+              value={segStatus}
+              onChange={(v) => setSegStatus(v as IncidentStatus)}
+            />
+          ) : undefined
+        }
         actions={
           <button className="btn-primary" onClick={() => navigate('/incidents/new')}>
             <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva incidencia
           </button>
         }
       />
-
-      {/* Segmentado Pendientes / Verificados (estilo filtro de Calendario) */}
-      {!fixedStatus && (
-        <div className="flex justify-center mb-4">
-          <SegStrip
-            size="lg"
-            inline
-            items={[
-              { value: 'PENDIENTE', label: 'Pendientes', icon: Clock, count: counts.PENDIENTE },
-              { value: 'VERIFICADO', label: 'Verificados', icon: ShieldCheck, count: counts.VERIFICADO },
-            ] satisfies SegItem[]}
-            value={segStatus}
-            onChange={(v) => setSegStatus(v as IncidentStatus)}
-          />
-        </div>
-      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-3">
