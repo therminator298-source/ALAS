@@ -24,7 +24,8 @@ export function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-surface border-t border-border grid pb-[env(safe-area-inset-bottom)]"
+      aria-label="Navegación principal"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 h-[calc(4rem+env(safe-area-inset-bottom))] bg-surface border-t border-border grid pb-[env(safe-area-inset-bottom)]"
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((it) => {

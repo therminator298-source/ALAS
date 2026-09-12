@@ -17,6 +17,7 @@ export function AppShell() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('[aria-modal="true"]')) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen((v) => !v);
@@ -54,7 +55,7 @@ export function AppShell() {
         />
         <section className="alas-model-stage">
           {!(location.pathname.startsWith('/acuses') || location.pathname.startsWith('/calendario')) && <Topbar notifCount={0} />}
-          <main ref={mainRef} className="alas-model-content pb-16 md:pb-0">
+          <main ref={mainRef} className="alas-model-content pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
             <Outlet />
           </main>
         </section>

@@ -27,14 +27,14 @@ interface SidebarProps {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
+  { label: 'Calendario tareas', to: '/calendario', icon: CalendarDays, match: ['/calendario'] },
+  { label: 'Acuses', to: '/acuses', icon: FileText, match: ['/acuses'] },
   {
     label: 'Incidencias de recepción',
     to: '/dashboard',
     icon: ClipboardList,
     match: ['/dashboard', '/incidents', '/reports', '/suppliers', '/products', '/audit'],
   },
-  { label: 'Acuses', to: '/acuses', icon: FileText, match: ['/acuses'] },
-  { label: 'Calendario tareas', to: '/calendario', icon: CalendarDays, match: ['/calendario'] },
 ];
 
 function sourceLabel(source: SessionSource): string {
