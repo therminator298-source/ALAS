@@ -484,7 +484,7 @@ export function CalendarioView() {
       {/* FAB (mobile): cargar tarea rápido */}
       <button
         onClick={() => openNew(tISO)}
-        className="sm:hidden fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-[#1478b8] to-brand text-white grid place-items-center shadow-[0_10px_28px_rgba(20,120,184,0.45)] active:scale-95 transition-transform"
+        className="sm:hidden fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-5 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-[#1478b8] to-brand text-white grid place-items-center shadow-[0_10px_28px_rgba(20,120,184,0.45)] active:scale-95 transition-transform"
         aria-label="Nueva tarea">
         <Plus className="h-6 w-6" strokeWidth={2.6} />
       </button>

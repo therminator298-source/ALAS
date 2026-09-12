@@ -633,4 +633,53 @@
   .alas-modal__footer {
     align-items: stretch;
   }
+
+  /* ── Hoja inferior (bottom sheet) PRO en móvil ── */
+  .alas-modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .alas-modal,
+  .alas-modal--sm,
+  .alas-modal--md,
+  .alas-modal--lg {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    padding-top: 12px; /* espacio para la barra de arrastre */
+  }
+
+  /* barra de arrastre centrada arriba */
+  .alas-modal::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    right: auto;
+    top: 8px;
+    bottom: auto;
+    width: 40px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: var(--model-gray-300);
+  }
+
+  .alas-modal__header {
+    padding-top: 12px;
+  }
+
+  /* botones del footer a lo ancho, guardar primero (visualmente arriba) */
+  .alas-modal__footer {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .alas-modal__footer .btn-primary,
+  .alas-modal__footer .btn-ghost {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 46px;
+  }
 }

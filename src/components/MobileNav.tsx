@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { CalendarDays, LayoutDashboard, ClipboardList } from 'lucide-react';
+import { CalendarDays, FileText, ClipboardList } from 'lucide-react';
 import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 
+// Mismos 3 módulos que el sidebar de escritorio.
 const ITEMS = [
-  { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard, end: true },
+  { to: '/calendario', label: 'Calendario', icon: CalendarDays, end: true },
+  { to: '/acuses', label: 'Acuses', icon: FileText, end: false },
   { to: '/incidents', label: 'Incidencias', icon: ClipboardList, end: false },
 ];
 
