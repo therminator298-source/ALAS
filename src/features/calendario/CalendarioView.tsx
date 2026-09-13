@@ -385,7 +385,12 @@ export function CalendarioView() {
           <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
         </button>
 
-        <UserMenu nombre={user.nombre} onSignOut={signOut} />
+        {/* Solo en teléfono: bajo 768px el sidebar se oculta (modelShell.css:602)
+            y esta pasaba a ser la única pantalla sin usuario ni forma de salir.
+            En escritorio el sidebar ya lo muestra, así que acá sobra. */}
+        <div className="md:hidden">
+          <UserMenu nombre={user.nombre} onSignOut={signOut} />
+        </div>
       </div>
 
       {/* Segmentado de depósitos en móvil: fila propia, nombres cortos */}
