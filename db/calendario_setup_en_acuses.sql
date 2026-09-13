@@ -41,11 +41,38 @@ create table if not exists tareas (
   updated_at  timestamptz not null default now()
 );
 
--- Por si la tabla ya existía de alguna prueba anterior:
-alter table tareas add column if not exists deposito   text;
-alter table tareas add column if not exists orden      int;
-alter table tareas add column if not exists usuario    text;
-alter table tareas add column if not exists updated_at timestamptz not null default now();
+-- ── 1b. Reconciliar una tabla `tareas` preexistente ─────────────────────────
+--  `create table if not exists` NO agrega columnas si la tabla ya estaba. Si
+--  existe una versión vieja con otro esquema, sin esto el índice de más abajo
+--  falla con: ERROR 42703: column "hora" does not exist.
+--  Se agregan TODAS las columnas, no solo las que uno cree que faltan.
+alter table tareas add column if not exists titulo      text;
+alter table tareas add column if not exists descripcion text;
+alter table tareas add column if not exists fecha       date;
+alter table tareas add column if not exists hora        time;
+alter table tareas add column if not exists responsable text;
+alter table tareas add column if not exists deposito    text;
+alter table tareas add column if not exists prioridad   text not null default 'NORMAL';
+alter table tareas add column if not exists estado      text not null default 'Pendiente';
+alter table tareas add column if not exists usuario     text;
+alter table tareas add column if not exists orden       int;
+alter table tareas add column if not exists created_at  timestamptz not null default now();
+alter table tareas add column if not exists updated_at  timestamptz not null default now();
+
+--  `titulo` y `fecha` deben ser NOT NULL, pero forzarlo revienta si la tabla
+--  vieja ya tiene filas con esos campos vacíos. Se intenta y, si no se puede,
+--  se avisa en vez de cortar todo el script.
+do $$
+declare c text;
+begin
+  foreach c in array array['titulo', 'fecha'] loop
+    begin
+      execute format('alter table tareas alter column %I set not null', c);
+    exception when others then
+      raise notice 'No se pudo poner NOT NULL en tareas.% (%). Revisá las filas con ese campo vacío.', c, sqlerrm;
+    end;
+  end loop;
+end $$;
 
 -- ── 2. Índices ──────────────────────────────────────────────────────────────
 --  El principal acompaña exactamente el orden con que la app consulta:
