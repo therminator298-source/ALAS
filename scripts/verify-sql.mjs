@@ -49,21 +49,24 @@ for (const file of files) {
     continue;
   }
 
-  // Las consultas de verificación al final de cada archivo usan vistas del
-  // catálogo que PGlite no expone igual; se corta ahí.
-  const cuerpo = sql.split(/^-- =+\r?\n--\s+VERIFICACI/m)[0];
+  // Se corre el archivo COMPLETO, consultas de verificación incluidas: es
+  // exactamente lo que se va a pegar en el SQL Editor.
+  if (sql.charCodeAt(0) === 0xfeff) {
+    fallos++;
+    console.log(` FALLA  ${file}\n        empieza con BOM — Postgres da "syntax error at or near". Guardar como UTF-8 sin BOM.`);
+    continue;
+  }
 
   try {
-    await db.exec(cuerpo);
+    await db.exec(sql);
     console.log(`  OK    ${file}`);
   } catch (e) {
     fallos++;
     const msg = String(e.message || e).split('\n')[0];
     console.log(` FALLA  ${file}\n        ${msg}`);
     if (e.position) {
-      const hasta = cuerpo.slice(0, Number(e.position));
-      const linea = hasta.split('\n').length;
-      console.log(`        línea ~${linea}: ${cuerpo.split('\n')[linea - 1]?.trim().slice(0, 90)}`);
+      const linea = sql.slice(0, Number(e.position)).split('\n').length;
+      console.log(`        línea ~${linea}: ${sql.split('\n')[linea - 1]?.trim().slice(0, 90)}`);
     }
   }
 }
