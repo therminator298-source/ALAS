@@ -56,6 +56,8 @@ export function CalendarioView() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // false = no hay Supabase configurado y se está mostrando data de mentira.
+  const [live, setLive] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -102,6 +104,7 @@ export function CalendarioView() {
         if (!alive) return;
         setTareas(res.rows);
         setLoadError(res.error);
+        setLive(res.live);
       })
       .catch((e: Error) => { if (alive) setLoadError(e.message || 'No se pudieron cargar las tareas.'); })
       .finally(() => { if (alive) setLoading(false); });
@@ -410,6 +413,28 @@ export function CalendarioView() {
           );
         })}
       </div>
+
+      {/* Sin esto, faltar una env var se veía igual que funcionar bien: la app
+          mostraba 5 tareas inventadas y "Tarea creada" al guardar, pero nada
+          se persistía. Un operario podía cargar toda su jornada al vacío. */}
+      {!live && !loading && (
+        <div role="alert" className="flex shrink-0 items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2.2} />
+          <div className="min-w-0 text-amber-900">
+            <p className="text-sm font-extrabold">No hay conexión con la base</p>
+            <p className="mt-0.5 text-xs font-semibold leading-snug">
+              Estas tareas son de ejemplo y <strong>lo que cargues no se va a guardar</strong>.
+              No cargues nada y avisá al administrador.
+            </p>
+            {/* El detalle técnico solo en desarrollo: al operario no le dice nada. */}
+            {import.meta.env.DEV && (
+              <p className="mt-1.5 font-mono text-[10px] leading-snug text-amber-700">
+                Faltan VITE_CAL_SUPABASE_URL / VITE_CAL_SUPABASE_ANON_KEY
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}
