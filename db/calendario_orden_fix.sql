@@ -1,4 +1,10 @@
 -- ============================================================================
+--  NOTA: si todavía NO creaste la tabla `tareas`, no hace falta este archivo.
+--  db/calendario_setup_en_acuses.sql ya incluye el índice, la RPC y el orden
+--  correcto. Este archivo sirve solo para arreglar una tabla YA cargada.
+-- ============================================================================
+
+-- ============================================================================
 --  ALAS · CALENDARIO — arreglo del orden manual + reordenar atómico
 --  Correr en el SQL Editor del proyecto Supabase del Calendario,
 --  después de db/calendario_schema.sql.

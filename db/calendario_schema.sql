@@ -1,4 +1,16 @@
 -- ============================================================================
+--  ⚠️  NO CORRER ESTE ARCHIVO EN EL PROYECTO DE ACUSES (fdcumrdbnrjpbfbrxqiw)
+--
+--  Está escrito para un proyecto Supabase DEDICADO al Calendario y termina con
+--  `create policy anon_all on tareas for all to anon using (true)`, que
+--  reabriría lo que cerró db/seguridad_01_permisos_minimos.sql.
+--
+--  Como `tareas` vive junto a las tablas de Acuses, usar en su lugar:
+--      db/calendario_setup_en_acuses.sql
+--  (crea la misma tabla, con permisos explícitos y sin tocar Acuses).
+-- ============================================================================
+
+-- ============================================================================
 --  ALAS · Apartado CALENDARIO DE TAREAS — esquema Supabase (proyecto DEDICADO)
 --  Correr en el SQL Editor del proyecto Supabase que crees para el Calendario.
 --
