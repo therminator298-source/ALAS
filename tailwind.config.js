@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Compila cada `hover:` dentro de @media (hover: hover). Sin esto, en el
+  // teléfono el hover se queda "pegado" después de tocar (no hay puntero que
+  // se retire), y las filas quedaban levantadas/sombreadas tras cada tap.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {

@@ -583,8 +583,12 @@
 @media (max-width: 767px) {
   .alas-model-layout {
     padding: 0;
-    min-height: 100vh;
-    overflow: auto;
+    /* 100dvh, no 100vh: con la barra de URL visible el contenedor quedaba
+       60-100px más alto que la pantalla y la última tarea quedaba tapada
+       por el nav inferior. `overflow: hidden` evita el scroll fantasma. */
+    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
     background: var(--model-gray-100);
   }
 
@@ -670,16 +674,23 @@
     padding-top: 12px;
   }
 
-  /* botones del footer a lo ancho, guardar primero (visualmente arriba) */
+  /* Footer: acción primaria dominante y al alcance del pulgar. La acción
+     destructiva NO vive acá en móvil (está al final del cuerpo, con
+     confirmación) para que no pueda tocarse por error al lado de Guardar. */
   .alas-modal__footer {
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
     gap: 10px;
   }
 
-  .alas-modal__footer .btn-primary,
-  .alas-modal__footer .btn-ghost {
-    flex: 1 1 auto;
+  .alas-modal__footer .btn-primary {
+    flex: 2 1 0;
     justify-content: center;
-    min-height: 46px;
+    min-height: 50px;
+  }
+
+  .alas-modal__footer .btn-ghost {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 50px;
   }
 }
