@@ -108,3 +108,70 @@ body {
     @apply inline-flex items-center gap-1.5 h-7 pl-2.5 pr-2 rounded-full text-2xs font-bold;
   }
 }
+
+/* ============================================================
+   TÁCTIL — se aplica a cualquier dispositivo con puntero grueso
+   (teléfono, tablet, pantalla táctil), no por ancho de pantalla.
+   Un teléfono en horizontal sigue siendo un teléfono.
+   ============================================================ */
+@media (pointer: coarse) {
+  /* iOS Safari hace zoom en cualquier campo con fuente < 16px y NO vuelve al
+     salir. Es la causa de que la pantalla quede ampliada al cargar una tarea. */
+  .input,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Mínimo táctil de 44px (Apple HIG) aunque la clase pida h-8 / h-9. */
+  .input,
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    min-height: 44px;
+  }
+
+  /* Sin flash gris de Android ni delay de 300ms al tocar. */
+  button,
+  a,
+  [role='button'],
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Scrollbars nativas: en táctil ocupan espacio y no se usan. */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+/* Área táctil de 44px sin agrandar el control visualmente: expande la zona
+   sensible con un pseudo-elemento. Para chips e íconos que deben verse chicos. */
+.tap-44 {
+  position: relative;
+}
+.tap-44::after {
+  content: '';
+  position: absolute;
+  inset: 50% 50%;
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+}
+
+/* Oculta la barra de scroll horizontal del riel de días sin perder el scroll. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
