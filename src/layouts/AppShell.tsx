@@ -7,6 +7,7 @@ import { MobileNav } from '@/components/MobileNav';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { ToastHost } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 import { useSession } from '@/store/session';
 
 export function AppShell() {
@@ -55,7 +56,15 @@ export function AppShell() {
         />
         <section className="alas-model-stage">
           {!(location.pathname.startsWith('/acuses') || location.pathname.startsWith('/calendario')) && <Topbar notifCount={0} />}
-          <main ref={mainRef} className="alas-model-content pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+          <main
+            ref={mainRef}
+            className={cn(
+              'alas-model-content md:pb-0',
+              user.rol === 'CALENDARIO'
+                ? 'pb-[env(safe-area-inset-bottom)]'
+                : 'pb-[calc(4rem+env(safe-area-inset-bottom))]',
+            )}
+          >
             <Outlet />
           </main>
         </section>

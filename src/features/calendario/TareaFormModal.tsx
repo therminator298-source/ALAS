@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Check, Trash2, PackageOpen, PackagePlus, Wrench, Recycle, PenLine, ChevronDown, Tag,
-  AlertTriangle, Flag, type LucideIcon,
+  AlertTriangle, type LucideIcon,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { Modal } from '@/components/ui/Modal';
@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/toast';
 import { useSession } from '@/store/session';
 import { cn } from '@/lib/utils';
 import { createTarea, updateTarea, deleteTarea } from './calendarioApi';
-import { DEPOSITOS, TAREA_PRIORIDADES, type Tarea } from './types';
+import { DEPOSITOS, type Tarea } from './types';
 import { DEP_ICON, ESTADO_KEYS, ESTADO_LABEL, EST_ICON, SOLID, todayISO, reduceMotion, type EstadoKey } from './estados';
 
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -20,12 +20,6 @@ const TAREA_TIPOS = ['DESCARGA', 'REPOSICIÓN', 'ARREGLO', 'CARGA DE BASURA', 'C
 const TIPO_ICONS: Record<string, LucideIcon> = {
   'DESCARGA': PackageOpen, 'REPOSICIÓN': PackagePlus, 'ARREGLO': Wrench,
   'CARGA DE BASURA': Trash2, 'CARGA DE CHATARRA': Recycle, 'OTROS': PenLine,
-};
-
-const PRIORIDAD_STYLE: Record<string, string> = {
-  BAJA: 'bg-slate-500 border-slate-500 text-white',
-  NORMAL: 'bg-brand border-brand text-white',
-  ALTA: 'bg-red-600 border-red-600 text-white',
 };
 
 interface Props {
@@ -44,7 +38,6 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
   const [hora, setHora] = useState('');
   const [responsable, setResponsable] = useState('');
   const [deposito, setDeposito] = useState(defaultDeposito);
-  const [prioridad, setPrioridad] = useState('NORMAL');
   const [estado, setEstado] = useState('Pendiente');
   const [descripcion, setDescripcion] = useState('');
   const [saving, setSaving] = useState(false);
@@ -56,10 +49,10 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
     if (tarea) {
       setTitulo(tarea.titulo); setFecha(tarea.fecha); setHora(tarea.hora ?? '');
       setResponsable(tarea.responsable ?? ''); setDeposito(tarea.deposito ?? defaultDeposito);
-      setPrioridad(tarea.prioridad); setEstado(tarea.estado); setDescripcion(tarea.descripcion ?? '');
+      setEstado(tarea.estado); setDescripcion(tarea.descripcion ?? '');
     } else {
       setTitulo(''); setFecha(defaultFecha || todayISO()); setHora(nowHM()); setResponsable('');
-      setDeposito(defaultDeposito); setPrioridad('NORMAL'); setEstado('Pendiente'); setDescripcion('');
+      setDeposito(defaultDeposito); setEstado('Pendiente'); setDescripcion('');
     }
   }, [open, tarea, defaultFecha, defaultDeposito]);
 
@@ -69,7 +62,7 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
     setSaving(true);
     const payload = {
       titulo: titulo.trim(), fecha, hora: hora || null, responsable: responsable.trim() || null,
-      deposito: deposito || null, prioridad, estado, descripcion: descripcion.trim() || null, usuario: user.nombre,
+      deposito: deposito || null, estado, descripcion: descripcion.trim() || null, usuario: user.nombre,
     };
     try {
       if (tarea) { await updateTarea(tarea.id, payload); toast('Tarea actualizada.', 'ok'); }
@@ -106,7 +99,7 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
       }
     >
       <div className="space-y-4">
-        <Field label="Título *">
+        <Field label="¿Qué tarea hay que hacer? *">
           <TipoSelect value={titulo} onPick={setTitulo} />
           <input
             className="input mt-2 min-h-[48px]"
@@ -118,6 +111,19 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
             autoComplete="off"
             enterKeyHint="next"
           />
+        </Field>
+
+        <Field label="Descripción (opcional)">
+          <textarea
+            className="input min-h-[88px] resize-y py-2.5"
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Agregá instrucciones o detalles importantes…"
+            aria-label="Descripción"
+            autoCapitalize="sentences"
+            enterKeyHint="next"
+          />
+          <p className="mt-1.5 text-[11px] font-medium text-ink-3">Se mostrará debajo del título en la tarjeta.</p>
         </Field>
 
         {/* Fecha y hora a ancho completo en móvil: son los dos campos más
@@ -137,27 +143,6 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
           </Field>
         )}
 
-        <Field label="Prioridad">
-          <div className="grid grid-cols-3 gap-2">
-            {TAREA_PRIORIDADES.map((p) => {
-              const on = p === prioridad;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPrioridad(p)}
-                  className={cn(
-                    'flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-bold transition-colors active:scale-[0.97]',
-                    on ? cn(PRIORIDAD_STYLE[p], 'shadow-sm') : 'border-border bg-surface text-ink-2',
-                  )}
-                >
-                  <Flag className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} /> {p}
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-
         <Field label="Depósito">
           <DepositoButtons value={deposito} onChange={setDeposito} />
         </Field>
@@ -172,18 +157,6 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
             autoCapitalize="words"
             autoComplete="off"
             enterKeyHint="next"
-          />
-        </Field>
-
-        <Field label="Descripción">
-          <textarea
-            className="input min-h-[96px] resize-y py-2.5"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Detalle de la tarea…"
-            aria-label="Descripción"
-            autoCapitalize="sentences"
-            enterKeyHint="done"
           />
         </Field>
 

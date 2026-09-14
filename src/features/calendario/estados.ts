@@ -80,7 +80,7 @@ export const DEP_ICON: Record<string, LucideIcon> = {
 export const DEP_CORTO: Record<string, string> = {
   'Depósito Central': 'Central',
   'Fábrica': 'Fábrica',
-  'Depósito Luque Sanber': 'Luque',
+  'Depósito Luque Sanber': 'Luque Sanber',
 };
 
 export const MESES = [

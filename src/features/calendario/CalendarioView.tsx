@@ -146,6 +146,13 @@ export function CalendarioView() {
     return Array.from(s).sort();
   }, [depTareas]);
 
+  const statusCounts = useMemo(() => {
+    const rows = selectedDay ? depTareas.filter((t) => t.fecha === selectedDay) : depTareas;
+    const counts: Record<string, number> = { all: rows.length, pendiente: 0, en_curso: 0, hecho: 0 };
+    rows.forEach((t) => { const key = estadoKey(t.estado); counts[key] = (counts[key] ?? 0) + 1; });
+    return counts;
+  }, [depTareas, selectedDay]);
+
   const tISO = todayISO();
 
   /** Orden canónico: fecha primero, después el orden manual DENTRO del día. */
@@ -359,7 +366,27 @@ export function CalendarioView() {
       {/* ── Cabecera ─────────────────────────────────────────────────────────
           En móvil el AppShell oculta el Topbar y el sidebar, así que esta era
           la única pantalla de la app sin título, sin usuario y sin salir. */}
-      <div className="flex shrink-0 items-center gap-2.5 md:gap-3">
+      {/* Cabecera móvil: compacta, con contexto y sesión en una sola tarjeta. */}
+      <header className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#1478b8] via-brand to-brand-dark p-4 text-white shadow-[0_12px_30px_rgba(8,72,106,0.24)] md:hidden">
+        <span className="pointer-events-none absolute -right-7 -top-10 h-28 w-28 rounded-full bg-white/10" />
+        <span className="pointer-events-none absolute -bottom-12 left-16 h-24 w-24 rounded-full bg-sky-300/10" />
+        <div className="relative flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/20">
+            <CalendarDays className="h-5 w-5" strokeWidth={2.3} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/65">Organizá tu jornada</p>
+            <h1 className="truncate text-lg font-extrabold leading-tight">Calendario de tareas</h1>
+            <p className="mt-0.5 truncate text-xs font-semibold text-white/75">
+              {loading ? 'Cargando tareas…' : `${statusCounts.all} tarea${statusCounts.all === 1 ? '' : 's'} en ${DEP_CORTO[deposito] ?? deposito}`}
+            </p>
+          </div>
+          <UserMenu nombre={user.nombre} onSignOut={signOut} />
+        </div>
+      </header>
+
+      {/* Cabecera completa de escritorio. */}
+      <div className="hidden shrink-0 items-center gap-3 md:flex">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#1478b8] to-brand text-white shadow-[0_6px_16px_rgba(20,120,184,0.35)]">
           <CalendarDays className="h-5 w-5" strokeWidth={2.2} />
         </span>
@@ -385,39 +412,39 @@ export function CalendarioView() {
           <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
         </button>
 
-        {/* Solo en teléfono: bajo 768px el sidebar se oculta (modelShell.css:602)
-            y esta pasaba a ser la única pantalla sin usuario ni forma de salir.
-            En escritorio el sidebar ya lo muestra, así que acá sobra. */}
-        <div className="md:hidden">
-          <UserMenu nombre={user.nombre} onSignOut={signOut} />
-        </div>
       </div>
 
-      {/* Segmentado de depósitos en móvil: fila propia, nombres cortos */}
-      <div className="dep-seg grid shrink-0 grid-cols-3 gap-2 md:hidden">
-        {DEPOSITOS.map((d) => {
-          const Icon = DEP_ICON[d] ?? Warehouse;
-          const on = d === deposito;
-          return (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDeposito(d)}
-              className={cn(
-                'flex min-h-[48px] min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-bold transition-colors active:scale-[0.98]',
-                on ? 'border-brand bg-gradient-to-br from-[#1478b8] to-brand text-white shadow-[0_4px_14px_rgba(20,120,184,0.3)]' : 'border-border bg-surface text-ink-2',
-              )}
-            >
-              {/* Bajo 380px el ícono se come el nombre ("Cen…"): se esconde. */}
-              <Icon className={cn('hidden h-4 w-4 shrink-0 min-[380px]:block', on ? 'text-white' : 'text-brand')} strokeWidth={2} />
-              <span className="truncate">{DEP_CORTO[d] ?? d}</span>
-              <span className={cn('grid h-5 min-w-[20px] shrink-0 place-items-center rounded-full px-1 text-[11px] font-extrabold tabular-nums', on ? 'bg-white/25 text-white' : 'bg-surface-3 text-ink-2')}>
-                {depCounts[d] ?? 0}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* En móvil cada depósito tiene un bloque amplio: nombre, ícono y cantidad. */}
+      <section className="dep-seg shrink-0 rounded-2xl border border-border bg-surface p-2 shadow-[0_4px_18px_rgba(15,36,64,0.06)] md:hidden" aria-label="Elegir depósito">
+        <div className="grid grid-cols-3 gap-1.5">
+          {DEPOSITOS.map((d) => {
+            const Icon = DEP_ICON[d] ?? Warehouse;
+            const on = d === deposito;
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDeposito(d)}
+                aria-pressed={on}
+                className={cn(
+                  'flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 text-xs font-extrabold transition-all active:scale-[0.97]',
+                  on
+                    ? 'border-brand bg-gradient-to-br from-[#1478b8] to-brand text-white shadow-[0_5px_14px_rgba(20,120,184,0.28)]'
+                    : 'border-transparent bg-surface text-ink-2 active:bg-surface-3',
+                )}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-white' : 'text-brand')} strokeWidth={2.2} />
+                  <span className="truncate">{DEP_CORTO[d] ?? d}</span>
+                </span>
+                <span className={cn('text-[11px] font-bold tabular-nums', on ? 'text-white/75' : 'text-ink-3')}>
+                  {depCounts[d] ?? 0} tarea{(depCounts[d] ?? 0) === 1 ? '' : 's'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Sin esto, faltar una env var se veía igual que funcionar bien: la app
           mostraba 5 tareas inventadas y "Tarea creada" al guardar, pero nada
@@ -492,7 +519,7 @@ export function CalendarioView() {
           </div>
 
           {/* ── Riel de días (móvil / tablet) ── */}
-          <div className="cal-panel card sticky top-0 z-20 flex shrink-0 flex-col gap-2 p-3 ring-1 ring-brand/10 lg:hidden">
+          <div className="cal-panel card sticky top-0 z-30 flex shrink-0 flex-col gap-2 border-brand/10 bg-white/95 p-3 shadow-[0_8px_24px_rgba(15,36,64,0.10)] backdrop-blur-xl lg:hidden">
             <div className="flex items-center gap-2">
               <button className="btn-secondary h-11 w-11 justify-center p-0" onClick={() => goMonth(-1)} aria-label="Mes anterior"><ChevronLeft className="h-5 w-5" /></button>
               <h2 className="flex-1 text-center text-base font-extrabold capitalize text-ink">{MESES[cursor.m]} <span className="text-brand">{cursor.y}</span></h2>
@@ -522,7 +549,9 @@ export function CalendarioView() {
 
           {/* ── Lista de tareas ── */}
           <div className="cal-panel card flex flex-col overflow-hidden ring-1 ring-brand/10 md:min-h-0 md:flex-1">
-            <div className="flex shrink-0 items-center justify-between gap-2 bg-gradient-to-r from-[#1478b8] to-brand px-3 py-2.5 text-white shadow-[0_2px_10px_rgba(20,120,184,0.25)] md:px-4 md:py-3">
+            {/* En móvil esta cabecera repetía mes, cantidad y depósito que ya
+                aparecen arriba. Se conserva completa donde sí aporta: escritorio. */}
+            <div className="hidden shrink-0 items-center justify-between gap-2 bg-gradient-to-r from-[#1478b8] to-brand px-4 py-3 text-white shadow-[0_2px_10px_rgba(20,120,184,0.25)] md:flex">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/20 text-white"><ListTodo className="h-4 w-4" /></span>
                 <div className="min-w-0">
@@ -538,6 +567,18 @@ export function CalendarioView() {
                 </button>
               )}
             </div>
+
+            {selectedDay && (
+              <div className="flex min-h-[48px] items-center justify-between gap-2 bg-gradient-to-r from-[#1478b8] to-brand px-3 text-white md:hidden">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-extrabold capitalize">{fmtDay(selectedDay)}</p>
+                  <p className="text-[10px] font-semibold text-white/70">{listTasks.length} tarea{listTasks.length === 1 ? '' : 's'}</p>
+                </div>
+                <button onClick={() => setSelectedDay(null)} className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3 text-[11px] font-bold text-white active:bg-white/30">
+                  <X className="h-3.5 w-3.5" /> Ver mes
+                </button>
+              </div>
+            )}
 
             {/* Filtros: en móvil el buscador ocupa su fila y los chips se
                 deslizan; todo a 44px de alto. */}
@@ -559,12 +600,19 @@ export function CalendarioView() {
                   <button
                     key={f.k}
                     onClick={() => setFEstado(f.k)}
+                    aria-pressed={fEstado === f.k}
                     className={cn(
-                      'min-h-[44px] shrink-0 rounded-xl border px-3.5 text-xs font-bold transition-colors active:scale-[0.97]',
+                      'inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border px-3.5 text-xs font-bold transition-colors active:scale-[0.97]',
                       fEstado === f.k ? EST_ACTIVE[f.k] : 'border-border bg-surface text-ink-2',
                     )}
                   >
                     {f.label}
+                    <span className={cn(
+                      'grid h-5 min-w-[20px] place-items-center rounded-full px-1 text-[10px] font-extrabold tabular-nums',
+                      fEstado === f.k ? 'bg-white/20 text-white' : 'bg-surface-3 text-ink-3',
+                    )}>
+                      {statusCounts[f.k] ?? 0}
+                    </span>
                   </button>
                 ))}
                 {resps.length > 0 && <RespFilter value={fResp} options={resps} onChange={setFResp} />}
@@ -598,16 +646,17 @@ export function CalendarioView() {
                 <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                   {isTouch ? (
                     <ul className="space-y-2.5">
-                      {listTasks.map((t) => (
-                        <div key={t.id} data-rowid={t.id} className="contents">
-                          <TareaCardMobile
-                            tarea={t}
-                            showDate={!selectedDay}
-                            onOpen={openEdit}
-                            onEstado={setEstado}
-                            onMenu={setMenuTarea}
-                          />
-                        </div>
+                      {listTasks.map((t, i) => (
+                        <TareaCardMobile
+                          key={t.id}
+                          tarea={t}
+                          index={i}
+                          showDate={!selectedDay}
+                          reorderable={reorderEnabled}
+                          onOpen={openEdit}
+                          onEstado={setEstado}
+                          onMenu={setMenuTarea}
+                        />
                       ))}
                     </ul>
                   ) : (
@@ -645,10 +694,16 @@ export function CalendarioView() {
       {/* FAB: la única forma de crear en móvil, por eso va bien separado del nav */}
       <button
         onClick={() => openNew(selectedDay ?? tISO)}
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-[#1478b8] to-brand text-white shadow-[0_10px_28px_rgba(20,120,184,0.45)] transition-transform active:scale-95 md:hidden"
+        className={cn(
+          'fixed right-4 z-40 inline-flex h-14 items-center gap-2 rounded-full bg-gradient-to-br from-[#1478b8] to-brand px-5 text-sm font-extrabold text-white shadow-[0_12px_30px_rgba(20,120,184,0.45)] ring-1 ring-white/20 transition-transform active:scale-95 md:hidden',
+          user.rol === 'CALENDARIO'
+            ? 'bottom-[calc(1rem+env(safe-area-inset-bottom))]'
+            : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
+        )}
         aria-label="Nueva tarea"
       >
-        <Plus className="h-6 w-6" strokeWidth={2.6} />
+        <Plus className="h-5 w-5" strokeWidth={2.8} />
+        Nueva tarea
       </button>
 
       {tip && !isTouch && <DayTooltip iso={tip.iso} rect={tip.rect} tasks={byDate.get(tip.iso) ?? []} />}
@@ -775,7 +830,14 @@ function DayPill({
     >
       <span className={cn('text-[10px] font-bold uppercase', isSelected ? 'text-white/80' : 'text-ink-3')}>{weekday}</span>
       <span className={cn('text-lg font-extrabold leading-none tabular-nums', isSelected ? 'text-white' : isToday ? 'text-brand' : 'text-ink')}>{day}</span>
-      <span className={cn('h-1.5 w-1.5 rounded-full', count > 0 ? (isSelected ? 'bg-white' : 'bg-brand') : 'bg-transparent')} />
+      <span className={cn(
+        'grid h-4 min-w-[16px] place-items-center rounded-full px-1 text-[9px] font-extrabold tabular-nums',
+        count > 0
+          ? (isSelected ? 'bg-white/25 text-white' : 'bg-brand-soft text-brand')
+          : 'bg-transparent text-transparent',
+      )}>
+        {count > 0 ? count : 0}
+      </span>
     </button>
   );
 }
@@ -914,7 +976,6 @@ function DayTooltip({ iso, rect, tasks }: { iso: string; rect: DOMRect; tasks: T
               <span className={cn('h-6 w-1 shrink-0 rounded-full', BAR[k])} />
               {t.hora && <span className="shrink-0 text-2xs font-bold tabular-nums text-ink-3">{t.hora.slice(0, 5)}</span>}
               <span className="flex-1 truncate text-xs font-semibold text-ink">{t.titulo}</span>
-              {t.prioridad === 'ALTA' && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />}
             </div>
           );
         })}

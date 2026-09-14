@@ -60,8 +60,8 @@ export function TareaRowDesktop({ tarea, index, reorderable, onOpen, onEstado }:
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-3 text-[11px] font-extrabold tabular-nums text-ink-3 transition-colors group-hover:bg-brand group-hover:text-white">
-        {index + 1}
+      <span className="grid h-7 min-w-[38px] shrink-0 place-items-center rounded-lg bg-brand-soft px-1.5 text-[10px] font-extrabold tracking-wide text-brand ring-1 ring-brand/15 transition-colors group-hover:bg-brand group-hover:text-white">
+        #{String(index + 1).padStart(2, '0')}
       </span>
 
       <div className={cn('flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border', EST_BADGE[k])}>
@@ -71,8 +71,13 @@ export function TareaRowDesktop({ tarea, index, reorderable, onOpen, onEstado }:
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 truncate text-sm font-bold text-ink">
-          {tarea.prioridad === 'ALTA' && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" title="Prioridad alta" />}
-          {tarea.titulo}
+          <span className="truncate">{tarea.titulo}</span>
+          {tarea.descripcion && (
+            <>
+              <span className="shrink-0 text-border-strong">·</span>
+              <span className="truncate text-xs font-medium text-ink-3">{tarea.descripcion}</span>
+            </>
+          )}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {tarea.hora && (

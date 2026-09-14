@@ -5,7 +5,7 @@ import { Clock, User, MoreHorizontal, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { estadoKey, type Tarea } from './types';
 import {
-  BAR, CHIP, DEP_ICON, EST_ICON, ESTADO_LABEL, NEXT_ESTADO, PREV_ESTADO, SOLID,
+  BAR, CHIP, EST_ICON, ESTADO_LABEL, NEXT_ESTADO, PREV_ESTADO, SOLID,
   dateOf, MESES_CORTO, reduceMotion, type EstadoKey,
 } from './estados';
 
@@ -16,8 +16,11 @@ const SWIPE_MAX = 104;
 
 interface Props {
   tarea: Tarea;
+  index: number;
   /** Muestra la fecha en la tarjeta (vista mes). En vista día sobra. */
   showDate: boolean;
+  /** Con filtros activos no se puede renumerar una lista parcialmente oculta. */
+  reorderable: boolean;
   onOpen: (t: Tarea) => void;
   onEstado: (t: Tarea, estado: EstadoKey) => void;
   onMenu: (t: Tarea) => void;
@@ -30,13 +33,12 @@ interface Props {
  * Tres formas de cambiar el estado, porque un gesto nunca puede ser el único
  * camino: tocar el chip, deslizar la tarjeta, o el menú «···».
  */
-export function TareaCardMobile({ tarea, showDate, onOpen, onEstado, onMenu }: Props) {
+export function TareaCardMobile({ tarea, index, showDate, reorderable, onOpen, onEstado, onMenu }: Props) {
   const k = estadoKey(tarea.estado);
   const EstIcon = EST_ICON[k];
-  const DepIcon = DEP_ICON[tarea.deposito ?? ''] ?? null;
 
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: tarea.id });
+    useSortable({ id: tarea.id, disabled: !reorderable });
 
   const [dx, setDx] = useState(0);
   const [swiping, setSwiping] = useState(false);
@@ -107,6 +109,7 @@ export function TareaCardMobile({ tarea, showDate, onOpen, onEstado, onMenu }: P
   return (
     <li
       ref={setNodeRef}
+      data-rowid={tarea.id}
       style={style}
       className={cn(
         'relative list-none rounded-2xl overflow-hidden',
@@ -156,13 +159,23 @@ export function TareaCardMobile({ tarea, showDate, onOpen, onEstado, onMenu }: P
         <span className={cn('absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl', BAR[k])} />
 
         <div className="min-w-0 flex-1">
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="inline-flex h-6 items-center rounded-lg bg-brand-soft px-2 text-[10px] font-extrabold tracking-[0.08em] text-brand ring-1 ring-brand/15">
+              #{String(index + 1).padStart(2, '0')}
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-ink-3">Tarea</span>
+          </div>
+
           {/* Título: 3 líneas completas, sin truncar a 8 caracteres */}
           <div className="flex items-start gap-2">
-            {tarea.prioridad === 'ALTA' && (
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" title="Prioridad alta" />
-            )}
-            <h3 className="text-[15px] font-bold leading-snug text-ink line-clamp-3">{tarea.titulo}</h3>
+            <h3 className="text-base font-extrabold leading-snug text-ink line-clamp-3">{tarea.titulo}</h3>
           </div>
+
+          {tarea.descripcion && (
+            <p className="mt-1.5 line-clamp-2 border-l-2 border-brand/20 pl-2 text-[13px] leading-5 text-ink-2">
+              {tarea.descripcion}
+            </p>
+          )}
 
           {/* Metadatos: chips que envuelven, ninguno truncado */}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -176,9 +189,6 @@ export function TareaCardMobile({ tarea, showDate, onOpen, onEstado, onMenu }: P
             )}
             {tarea.responsable && (
               <Meta><User className="h-3 w-3 shrink-0" />{tarea.responsable}</Meta>
-            )}
-            {tarea.deposito && DepIcon && (
-              <Meta><DepIcon className="h-3 w-3 shrink-0" />{tarea.deposito}</Meta>
             )}
           </div>
 
@@ -215,10 +225,17 @@ export function TareaCardMobile({ tarea, showDate, onOpen, onEstado, onMenu }: P
               {...attributes}
               {...listeners}
               type="button"
-              aria-label={`Reordenar ${tarea.titulo}`}
+              disabled={!reorderable}
+              aria-label={reorderable ? `Reordenar ${tarea.titulo}` : 'Quitá los filtros para reordenar'}
+              title={reorderable ? 'Arrastrá para reordenar o mover de día' : 'Quitá los filtros para reordenar'}
               onClick={(e) => e.stopPropagation()}
               style={{ touchAction: 'none' }}
-              className="grid h-[44px] w-[44px] shrink-0 cursor-grab place-items-center rounded-xl text-ink-3/60 active:cursor-grabbing active:bg-surface-3"
+              className={cn(
+                'grid h-[44px] w-[44px] shrink-0 place-items-center rounded-xl transition-colors',
+                reorderable
+                  ? 'cursor-grab text-ink-3/60 active:cursor-grabbing active:bg-surface-3'
+                  : 'cursor-not-allowed bg-surface-3/60 text-ink-3/25',
+              )}
             >
               <GripVertical className="h-5 w-5" />
             </button>

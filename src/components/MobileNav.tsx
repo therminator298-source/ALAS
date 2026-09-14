@@ -10,14 +10,13 @@ const ITEMS = [
   { to: '/incidents', label: 'Incidencias', icon: ClipboardList, end: false },
 ];
 
-const CALENDAR_ITEMS = [
-  { to: '/calendario', label: 'Calendario', icon: CalendarDays, end: true },
-];
-
 /** Navegación inferior para móvil (oculta en ≥ md). */
 export function MobileNav() {
   const { user } = useSession();
-  const items = user.rol === 'CALENDARIO' ? CALENDAR_ITEMS : ITEMS;
+  // Para el rol exclusivo de Calendario una barra con un único enlace a la
+  // pantalla actual no aporta navegación y ocupa 64px valiosos del teléfono.
+  if (user.rol === 'CALENDARIO') return null;
+  const items = ITEMS;
   const itemCls = ({ isActive }: { isActive: boolean }) =>
     cn(
       'flex flex-col items-center justify-center gap-0.5 text-2xs font-semibold transition-colors',

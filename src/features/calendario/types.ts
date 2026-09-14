@@ -1,8 +1,6 @@
 export type TareaEstado = 'Pendiente' | 'En curso' | 'Hecho';
-export type TareaPrioridad = 'BAJA' | 'NORMAL' | 'ALTA';
 
 export const TAREA_ESTADOS: TareaEstado[] = ['Pendiente', 'En curso', 'Hecho'];
-export const TAREA_PRIORIDADES: TareaPrioridad[] = ['BAJA', 'NORMAL', 'ALTA'];
 
 /** Depósitos / almacenes que se administran por separado. */
 export const DEPOSITOS = ['Depósito Central', 'Fábrica', 'Depósito Luque Sanber'] as const;
@@ -23,7 +21,6 @@ export interface Tarea {
   hora: string | null;      // HH:MM
   responsable: string | null;
   deposito: string | null;
-  prioridad: TareaPrioridad | string;
   estado: TareaEstado | string;
   usuario: string | null;
   orden: number | null;
@@ -37,7 +34,6 @@ export interface NuevaTarea {
   hora?: string | null;
   responsable?: string | null;
   deposito?: string | null;
-  prioridad: string;
   estado: string;
   usuario?: string | null;
   orden?: number | null;

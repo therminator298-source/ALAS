@@ -5,17 +5,17 @@ import type { Tarea, NuevaTarea } from './types';
 let MOCK: Tarea[] = (() => {
   const iso = (off: number) => { const d = new Date(); d.setDate(d.getDate() + off); return d.toISOString().slice(0, 10); };
   const base = [
-    { id: 1, titulo: 'Revisar recepción de hierros', descripcion: 'Control de calidad lote 200', fecha: iso(0), hora: '09:00', responsable: 'David Espinola', deposito: 'Depósito Central', prioridad: 'ALTA', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
-    { id: 2, titulo: 'Cargar acuses del día', descripcion: null, fecha: iso(0), hora: '14:00', responsable: 'Elias Cabrera', deposito: 'Depósito Central', prioridad: 'NORMAL', estado: 'En curso', usuario: 'David Espinola', created_at: new Date().toISOString() },
-    { id: 3, titulo: 'Inventario depósito Luque', descripcion: 'Conteo cíclico', fecha: iso(2), hora: null, responsable: 'Jonathan Peralta', deposito: 'Depósito Luque Sanber', prioridad: 'NORMAL', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
-    { id: 4, titulo: 'Cierre semanal de flete', descripcion: null, fecha: iso(-1), hora: '17:00', responsable: 'Lisandro López', deposito: 'Fábrica', prioridad: 'BAJA', estado: 'Hecho', usuario: 'David Espinola', created_at: new Date().toISOString() },
-    { id: 5, titulo: 'Mantenimiento de montacargas', descripcion: 'Sala 2', fecha: iso(4), hora: '10:30', responsable: 'David Espinola', deposito: 'Fábrica', prioridad: 'ALTA', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
+    { id: 1, titulo: 'Revisar recepción de hierros', descripcion: 'Control de calidad lote 200', fecha: iso(0), hora: '09:00', responsable: 'David Espinola', deposito: 'Depósito Central', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
+    { id: 2, titulo: 'Cargar acuses del día', descripcion: null, fecha: iso(0), hora: '14:00', responsable: 'Elias Cabrera', deposito: 'Depósito Central', estado: 'En curso', usuario: 'David Espinola', created_at: new Date().toISOString() },
+    { id: 3, titulo: 'Inventario depósito Luque', descripcion: 'Conteo cíclico', fecha: iso(2), hora: null, responsable: 'Jonathan Peralta', deposito: 'Depósito Luque Sanber', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
+    { id: 4, titulo: 'Cierre semanal de flete', descripcion: null, fecha: iso(-1), hora: '17:00', responsable: 'Lisandro López', deposito: 'Fábrica', estado: 'Hecho', usuario: 'David Espinola', created_at: new Date().toISOString() },
+    { id: 5, titulo: 'Mantenimiento de montacargas', descripcion: 'Sala 2', fecha: iso(4), hora: '10:30', responsable: 'David Espinola', deposito: 'Fábrica', estado: 'Pendiente', usuario: 'David Espinola', created_at: new Date().toISOString() },
   ];
   return base.map((t, i) => ({ ...t, orden: i }));
 })();
 let mockSeq = 100;
 
-const COLS = 'id,titulo,descripcion,fecha,hora,responsable,deposito,prioridad,estado,usuario,orden,created_at';
+const COLS = 'id,titulo,descripcion,fecha,hora,responsable,deposito,estado,usuario,orden,created_at';
 
 export interface ListResult {
   rows: Tarea[];

@@ -49,7 +49,6 @@ async function fixture(context) {
       hora: '09:00',
       responsable: i === 0 ? 'Responsable con nombre y apellido muy extensos' : `Responsable ${(i % 3) + 1}`,
       deposito: deposits[Math.floor(i / 6)] ?? deposits[0],
-      prioridad: i === 0 ? 'ALTA' : 'NORMAL',
       estado: ['Pendiente', 'En curso', 'Hecho'][i % 3],
       usuario: 'Prueba móvil',
       orden: i % 6,
