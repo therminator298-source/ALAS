@@ -106,7 +106,7 @@ async function measure(browser, width, height) {
 
 async function navigate(page, view) {
   if (page.viewportSize().width < 768) await page.getByLabel('Vista de Acuses').selectOption(view);
-  else await page.getByRole('tab', { name: { resumen: 'Dashboard Resumen', acuses: 'Acuses', calendario: 'Calendario', repartidores: 'Repartidores', historial: 'Historial' }[view], exact: true }).click();
+  else await page.getByRole('button', { name: { resumen: 'Dashboard Resumen', acuses: 'Acuses', calendario: 'Calendario', repartidores: 'Repartidores', historial: 'Historial' }[view], exact: true }).click();
 }
 
 async function verifyNavigation(browser, width) {

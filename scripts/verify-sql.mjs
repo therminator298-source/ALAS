@@ -21,6 +21,7 @@ import { PGlite } from '@electric-sql/pglite';
 // Orden real de instalación en el proyecto fdcumrdbnrjpbfbrxqiw.
 const PIPELINE = [
   'db/acuse_schema.sql',
+  'db/acuse_guardado_atomico.sql',
   'db/calendario_00_archivar_tabla_vieja.sql',
   'db/calendario_setup_en_acuses.sql',
   'db/seguridad_01_permisos_minimos.sql',
@@ -85,6 +86,70 @@ if (fallos === 0) {
   console.log(peligro.length
     ? `\n⚠️  Tablas que todavía se pueden borrar: ${peligro.map((x) => x.table_name).join(', ')}`
     : '\n✓ Ninguna tabla borrable de más (solo tareas y acuse_detalle, que la app necesita).');
+}
+
+// ── Prueba funcional: un acuse se guarda completo o no se guarda nada ───────
+if (fallos === 0) {
+  console.log('\n─── prueba funcional de `guardar_acuse_atomico` ───');
+  const t = async (nombre, fn) => {
+    try { const d = await fn(); console.log(`  OK    ${nombre}${d ? ` — ${d}` : ''}`); }
+    catch (e) { fallos++; console.log(` FALLA  ${nombre} — ${String(e.message || e).split('\n')[0]}`); }
+  };
+
+  await db.exec(`
+    insert into clientes (cod_cliente, nombre, ruc, direccion, ciudad, zona, telefono)
+    values ('CLI-TEST', 'Cliente de prueba', '80000000-0', 'Dirección de prueba', 'Luque', 'CENTRAL', '021000000');
+    insert into articulos (material, descripcion, um)
+    values ('MAT-TEST', 'Mercadería de prueba', 'UN');
+    insert into repartidores (codigo, nombre, activo)
+    values ('REP-TEST', 'Repartidor de prueba', true);`);
+  const repartidorId = (await db.query(`select id from repartidores where codigo = 'REP-TEST'`)).rows[0].id;
+  let acuseId;
+
+  await t('crea cabecera, detalle, historial y log juntos', async () => {
+    const details = JSON.stringify([{ cod_mercaderia: 'MAT-TEST', cantidad: 3, um: 'UN', nota: 'Sin golpes' }]);
+    const result = await db.query(
+      `select * from guardar_acuse_atomico($1::bigint, $2::text, $3::text, $4::date, $5::date, $6::bigint, $7::text, $8::text, $9::jsonb)`,
+      [null, 'CLI-TEST', 'Pendiente', '2026-09-14', null, repartidorId, 'Prueba', 'tester', details],
+    );
+    acuseId = result.rows[0].id;
+    const saved = (await db.query(`
+      select a.cliente_nombre, a.zona, d.descripcion, d.cantidad::int cantidad,
+             (select count(*)::int from acuse_historial h where h.acuse_id = a.id) historial,
+             (select count(*)::int from acuse_log l where l.acuse_id = a.id) logs
+        from acuses a join acuse_detalle d on d.acuse_id = a.id
+       where a.id = $1`, [acuseId])).rows[0];
+    if (saved.cliente_nombre !== 'Cliente de prueba' || saved.zona !== 'CENTRAL') throw new Error('snapshot de cliente incorrecto');
+    if (saved.descripcion !== 'Mercadería de prueba' || saved.cantidad !== 3) throw new Error('detalle incorrecto');
+    if (saved.historial !== 1 || saved.logs !== 1) throw new Error('auditoría incompleta');
+    return result.rows[0].nro_acuse;
+  });
+
+  await t('revierte todo si una mercadería no existe', async () => {
+    const before = (await db.query('select count(*)::int n from acuses')).rows[0].n;
+    try {
+      await db.query(
+        `select * from guardar_acuse_atomico($1::bigint, $2::text, $3::text, $4::date, $5::date, $6::bigint, $7::text, $8::text, $9::jsonb)`,
+        [null, 'CLI-TEST', 'Pendiente', '2026-09-14', null, repartidorId, null, 'tester', JSON.stringify([{ cod_mercaderia: 'NO-EXISTE', cantidad: 1 }])],
+      );
+    } catch {
+      const after = (await db.query('select count(*)::int n from acuses')).rows[0].n;
+      if (after !== before) throw new Error('quedó una cabecera huérfana');
+      return 'sin cabecera huérfana';
+    }
+    throw new Error('aceptó una mercadería inexistente');
+  });
+
+  await t('actualiza el detalle dentro de la misma transacción', async () => {
+    const details = JSON.stringify([{ cod_mercaderia: 'MAT-TEST', cantidad: 7, um: 'UN', nota: null }]);
+    await db.query(
+      `select * from guardar_acuse_atomico($1::bigint, $2::text, $3::text, $4::date, $5::date, $6::bigint, $7::text, $8::text, $9::jsonb)`,
+      [acuseId, 'CLI-TEST', 'En Reparto', '2026-09-14', null, repartidorId, null, 'tester', details],
+    );
+    const saved = (await db.query(`select count(*)::int n, max(cantidad)::int cantidad from acuse_detalle where acuse_id = $1`, [acuseId])).rows[0];
+    if (saved.n !== 1 || saved.cantidad !== 7) throw new Error('el detalle no fue reemplazado correctamente');
+    return 'cantidad 7';
+  });
 }
 
 // ── Prueba funcional: que la tabla y la RPC hagan lo que dicen ──────────────

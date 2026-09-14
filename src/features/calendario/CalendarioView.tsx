@@ -61,7 +61,7 @@ export function CalendarioView() {
   // false = no hay Supabase configurado y se está mostrando data de mentira.
   const [live, setLive] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(() => todayISO());
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Tarea | null>(null);
   const [formFecha, setFormFecha] = useState(todayISO());
@@ -132,7 +132,11 @@ export function CalendarioView() {
     return () => { clearTimeout(timer); stop(); };
   }, [reload]);
 
-  useEffect(() => { setSelectedDay(null); setFResp(''); }, [cursor, deposito]);
+  useEffect(() => {
+    const visibleMonth = `${cursor.y}-${String(cursor.m + 1).padStart(2, '0')}`;
+    setSelectedDay((current) => current?.startsWith(visibleMonth) ? current : null);
+    setFResp('');
+  }, [cursor, deposito]);
 
   const depTareas = useMemo(() => tareas.filter((t) => t.deposito === deposito), [tareas, deposito]);
   const depCounts = useMemo(() => {
@@ -242,8 +246,8 @@ export function CalendarioView() {
 
   /* ── Acciones ───────────────────────────────────────────────────────────── */
   const goMonth = (delta: number) => setCursor((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
-  const goToday = () => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); setSelectedDay(null); };
-  const openNew = (fecha: string) => { setEditing(null); setFormFecha(fecha); setFormOpen(true); };
+  const goToday = () => { const d = new Date(); setCursor({ y: d.getFullYear(), m: d.getMonth() }); setSelectedDay(todayISO()); };
+  const openNew = (_fecha: string) => { setEditing(null); setFormFecha(todayISO()); setFormOpen(true); };
   const openEdit = (t: Tarea) => { setEditing(t); setFormOpen(true); };
   const toggleDay = (iso: string) => setSelectedDay((cur) => (cur === iso ? null : iso));
 

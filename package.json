@@ -12,6 +12,8 @@
     "typecheck": "tsc -b --noEmit",
     "dev:test": "vite --mode test --port 5179 --host 127.0.0.1",
     "verify:mobile": "node scripts/verify-calendar-mobile.mjs",
+    "verify:acuses-catalogs": "node scripts/import-acuse-catalogs.mjs",
+    "import:acuses-catalogs": "node scripts/import-acuse-catalogs.mjs --apply",
     "verify:sql": "node scripts/verify-sql.mjs"
   },
   "dependencies": {

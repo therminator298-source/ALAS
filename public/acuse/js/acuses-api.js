@@ -2655,6 +2655,7 @@
       Usuario: usuario,
       detalles: detalles.map((item) => ({
         Cod_Mercaderia: item.Cod_Mercaderia,
+        Descr_SAP: item.Descr_SAP || null,
         Cantidad: Number(item.Cantidad),
         UM: item.UM,
         Nota: item.Nota || null

@@ -220,14 +220,57 @@
     return { items: items, total: res.count == null ? items.length : res.count, limit: fetchAll ? (res.count || items.length) : limit, offset: offset, summary: summary };
   }
 
+  function atomicRpcMissing(error) {
+    var code = String(error && error.code || '');
+    var message = String(error && error.message || '').toLowerCase();
+    return code === 'PGRST202' || (message.indexOf('guardar_acuse_atomico') >= 0 && message.indexOf('schema cache') >= 0);
+  }
+
+  function assertWrites(results) {
+    var failed = (results || []).find(function (result) { return result && result.error; });
+    if (failed) throw httpError(500, failed.error.message);
+  }
+
+  async function saveAcuseAtomic(client, id, body) {
+    var detalles = (body.detalles || []).map(function (d) {
+      return {
+        cod_mercaderia: d.Cod_Mercaderia,
+        cantidad: Number(d.Cantidad),
+        um: d.UM || null,
+        nota: d.Nota || null
+      };
+    });
+    var result = await client.rpc('guardar_acuse_atomico', {
+      p_acuse_id: id == null ? null : Number(id),
+      p_cod_cliente: body.Cod_Cliente,
+      p_estado: normEstado(body.Estado),
+      p_fecha_emision: body.Fecha_Emision,
+      p_fecha_entrega: body.Fecha_Entrega || null,
+      p_repartidor_id: body.ID_Repartidor ? Number(body.ID_Repartidor) : null,
+      p_observacion: body.Observacion || null,
+      p_usuario: body.Usuario || CFG.user || null,
+      p_detalles: detalles
+    });
+    if (result.error) {
+      if (atomicRpcMissing(result.error)) return null;
+      throw httpError(400, result.error.message);
+    }
+    var saved = Array.isArray(result.data) ? result.data[0] : result.data;
+    if (!saved || !saved.id) throw httpError(500, 'Supabase no devolvió el acuse guardado.');
+    return getAcuseFull(client, saved.id);
+  }
+
   async function createAcuse(client, body) {
+    var atomic = await saveAcuseAtomic(client, null, body);
+    if (atomic) return atomic;
+
     var pre = await Promise.all([snapshotCliente(client, body.Cod_Cliente), repNombre(client, body.ID_Repartidor)]);
     var snap = pre[0], rep = pre[1];
     var ins = {
       cod_cliente: body.Cod_Cliente,
       cliente_nombre: snap.cliente_nombre, cliente_ruc: snap.cliente_ruc, cliente_direccion: snap.cliente_direccion,
       cliente_ciudad: snap.cliente_ciudad, cliente_telefono: snap.cliente_telefono,
-      zona: body.Zona || snap.zona_cli || null,
+      zona: snap.zona_cli || body.Zona || null,
       estado: normEstado(body.Estado), fecha_emision: body.Fecha_Emision, fecha_entrega: body.Fecha_Entrega || null,
       repartidor_id: body.ID_Repartidor || null, repartidor_nombre: rep ? rep.nombre : null,
       observacion: body.Observacion || null, usuario: body.Usuario || CFG.user, activo: true
@@ -242,11 +285,14 @@
       client.from('acuse_log').insert({ acuse_id: id, accion: 'CREAR', usuario: ins.usuario, observacion: 'Acuse creado desde modulo web' })
     ];
     if (dets.length) writes.push(client.from('acuse_detalle').insert(dets));
-    await Promise.all(writes);
+    assertWrites(await Promise.all(writes));
     return getAcuseFull(client, id);
   }
 
   async function updateAcuse(client, id, body) {
+    var atomic = await saveAcuseAtomic(client, id, body);
+    if (atomic) return atomic;
+
     var pre = await Promise.all([
       snapshotCliente(client, body.Cod_Cliente),
       repNombre(client, body.ID_Repartidor),
@@ -256,19 +302,20 @@
     var upd = {
       cod_cliente: body.Cod_Cliente, cliente_nombre: snap.cliente_nombre, cliente_ruc: snap.cliente_ruc,
       cliente_direccion: snap.cliente_direccion, cliente_ciudad: snap.cliente_ciudad, cliente_telefono: snap.cliente_telefono,
-      zona: body.Zona || snap.zona_cli || null, estado: normEstado(body.Estado),
+      zona: snap.zona_cli || body.Zona || null, estado: normEstado(body.Estado),
       fecha_emision: body.Fecha_Emision, fecha_entrega: body.Fecha_Entrega || null,
       repartidor_id: body.ID_Repartidor || null, repartidor_nombre: rep ? rep.nombre : null,
       observacion: body.Observacion || null
     };
     var r = await client.from('acuses').update(upd).eq('id', id);
     if (r.error) throw httpError(500, r.error.message);
-    await client.from('acuse_detalle').delete().eq('acuse_id', id);
+    var deleted = await client.from('acuse_detalle').delete().eq('acuse_id', id);
+    if (deleted.error) throw httpError(500, deleted.error.message);
     var dets = (body.detalles || []).map(function (d) { return { acuse_id: id, cod_mercaderia: d.Cod_Mercaderia, descripcion: d.Descr_SAP || null, cantidad: Number(d.Cantidad), um: d.UM || null, nota: d.Nota || null }; });
     var writes = [client.from('acuse_log').insert({ acuse_id: id, accion: 'EDITAR', usuario: body.Usuario || CFG.user, observacion: 'Acuse actualizado desde modulo web' })];
     if (dets.length) writes.push(client.from('acuse_detalle').insert(dets));
     if (!prev.data || prev.data.estado !== upd.estado) writes.push(client.from('acuse_historial').insert({ acuse_id: id, estado: upd.estado, usuario: body.Usuario || CFG.user, observacion: 'Cambio de estado desde edicion' }));
-    await Promise.all(writes);
+    assertWrites(await Promise.all(writes));
     return getAcuseFull(client, id);
   }
 
