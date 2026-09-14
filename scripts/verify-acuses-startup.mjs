@@ -183,7 +183,7 @@ async function verifyExclusiveRoles(browser) {
   } finally { await calendarFixture.context.close(); }
 
   const acusesFixture = await openFixture(browser, { width: 390, height: 844 }, {
-    role: 'acuses', permissions: ['acuses'],
+    role: 'acuses', permissions: ['calendario'],
   });
   try {
     const { page } = acusesFixture;
