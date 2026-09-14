@@ -22,6 +22,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       ? [
         { label: 'Ir a Calendario tareas', hint: 'Navegar', action: () => navigate('/calendario') },
       ]
+      : user.rol === 'ACUSES'
+        ? [
+          { label: 'Ir a Acuses', hint: 'Navegar', action: () => navigate('/acuses') },
+        ]
       : [
       { label: 'Nueva incidencia', hint: 'Crear', action: () => navigate('/incidents/new') },
       { label: 'Ir a Pendientes', hint: 'Navegar', action: () => navigate('/incidents/pending') },

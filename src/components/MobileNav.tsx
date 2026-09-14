@@ -13,9 +13,9 @@ const ITEMS = [
 /** Navegación inferior para móvil (oculta en ≥ md). */
 export function MobileNav() {
   const { user } = useSession();
-  // Para el rol exclusivo de Calendario una barra con un único enlace a la
-  // pantalla actual no aporta navegación y ocupa 64px valiosos del teléfono.
-  if (user.rol === 'CALENDARIO') return null;
+  // Para los roles exclusivos, una barra con un único enlace a la pantalla
+  // actual no aporta navegación y ocupa 64px valiosos del teléfono.
+  if (user.rol === 'CALENDARIO' || user.rol === 'ACUSES') return null;
   const items = ITEMS;
   const itemCls = ({ isActive }: { isActive: boolean }) =>
     cn(

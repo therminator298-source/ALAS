@@ -60,7 +60,7 @@ export function AppShell() {
             ref={mainRef}
             className={cn(
               'alas-model-content md:pb-0',
-              user.rol === 'CALENDARIO'
+              user.rol === 'CALENDARIO' || user.rol === 'ACUSES'
                 ? 'pb-[env(safe-area-inset-bottom)]'
                 : 'pb-[calc(4rem+env(safe-area-inset-bottom))]',
             )}
@@ -103,11 +103,11 @@ function SessionRequired({ error, onLogin }: { error: string; onLogin: () => voi
           </div>
           <img src="/logo-alas.png" alt="ALAS" className="mx-auto mt-5 h-8 w-auto" />
           <h1 className="mt-5 text-xl font-extrabold text-ink">
-            {isPermissionError ? 'Sin permiso para Calendario' : 'Iniciar sesion desde el launcher'}
+            {isPermissionError ? 'Sin permiso para este módulo' : 'Iniciar sesion desde el launcher'}
           </h1>
           <p className="mt-2 text-sm leading-6 text-ink-2">
             {isPermissionError
-              ? 'Tu usuario esta conectado, pero no tiene habilitado el modulo calendario.'
+              ? 'Tu usuario esta conectado, pero no tiene habilitado este módulo.'
               : 'Para abrir este modulo en produccion, entra desde el launcher ALAS con tu usuario.'}
           </p>
           <button onClick={onLogin} className="btn-primary mt-6 w-full">

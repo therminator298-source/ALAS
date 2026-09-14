@@ -14,12 +14,15 @@ const today = new Date().toISOString().slice(0, 10);
 async function openFixture(browser, viewport, options = {}) {
   const context = await browser.newContext({ viewport, reducedMotion: 'reduce', hasTouch: viewport.width < 768 });
   const state = { requests: [], fail: options.failAPI || false, failSdk: options.failSdk || false, failChart: options.failChart || false, sdkLoads: 0, chartDelay: options.chartDelay ?? 1200 };
-  await context.addInitScript(role => {
+  await context.addInitScript(({ role, permissions }) => {
     localStorage.setItem('alas.sso.session', JSON.stringify({
       userId: '29157828-c678-4181-b254-8fefe550190b', name: 'Prueba de rendimiento',
-      role, permissions: ['calendario'], exp: Date.now() + 3600000,
+      role, permissions, exp: Date.now() + 3600000,
     }));
-  }, options.role || 'admin');
+  }, {
+    role: options.role || 'admin',
+    permissions: options.permissions || ['calendario', 'acuses'],
+  });
   await context.route('**/*', async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -168,14 +171,34 @@ async function verifyRecovery(browser, kind) {
   } finally { await context.close(); }
 }
 
-async function verifyRole(browser) {
-  const { context, page } = await openFixture(browser, { width: 390, height: 844 }, { role: 'calendario' });
+async function verifyExclusiveRoles(browser) {
+  const calendarFixture = await openFixture(browser, { width: 390, height: 844 }, {
+    role: 'calendario', permissions: ['calendario'],
+  });
   try {
-    await page.goto(`${baseURL}/acuses`);
-    await page.waitForURL('**/calendario');
-    assert.equal(await page.locator('iframe[title="Acuses"]').count(), 0);
+    await calendarFixture.page.goto(`${baseURL}/acuses`);
+    await calendarFixture.page.waitForURL('**/calendario');
+    assert.equal(await calendarFixture.page.locator('iframe[title="Acuses"]').count(), 0);
     console.log('PASS calendar-only role remains restricted');
-  } finally { await context.close(); }
+  } finally { await calendarFixture.context.close(); }
+
+  const acusesFixture = await openFixture(browser, { width: 390, height: 844 }, {
+    role: 'acuses', permissions: ['acuses'],
+  });
+  try {
+    const { page } = acusesFixture;
+    await page.goto(`${baseURL}/acuses`);
+    await page.locator('iframe[title="Acuses"]').waitFor();
+    assert.equal(await page.locator('a[href="/acuses"]').count(), 1);
+    assert.equal(await page.locator('a[href="/calendario"]').count(), 0);
+    assert.equal(await page.locator('a[href="/incidents"]').count(), 0);
+
+    await page.goto(`${baseURL}/calendario`);
+    await page.waitForURL('**/acuses');
+    await page.goto(`${baseURL}/incidents`);
+    await page.waitForURL('**/acuses');
+    console.log('PASS acuses-only role sees and opens only Acuses');
+  } finally { await acusesFixture.context.close(); }
 }
 
 async function verifyKpisPagination(browser) {
@@ -201,7 +224,7 @@ try {
     await verifyNavigation(browser, 1440);
     await verifyNavigation(browser, 390);
     for (const kind of ['api', 'sdk', 'kpis', 'chart']) await verifyRecovery(browser, kind);
-    await verifyRole(browser);
+    await verifyExclusiveRoles(browser);
     await verifyKpisPagination(browser);
   }
 } finally { await browser.close(); }

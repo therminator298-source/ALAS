@@ -50,7 +50,8 @@ export type Role =
   | 'OPERADOR_RECEPCION'
   | 'COMPRAS'
   | 'AUDITOR'
-  | 'CALENDARIO';
+  | 'CALENDARIO'
+  | 'ACUSES';
 
 export type Permission =
   | 'incident.create'

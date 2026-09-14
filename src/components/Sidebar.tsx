@@ -43,8 +43,13 @@ function sourceLabel(source: SessionSource): string {
 
 export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProps) {
   const { pathname } = useLocation();
-  const visibleItems = user.rol === 'CALENDARIO'
-    ? SIDEBAR_ITEMS.filter((item) => item.to === '/calendario')
+  const exclusivePath = user.rol === 'CALENDARIO'
+    ? '/calendario'
+    : user.rol === 'ACUSES'
+      ? '/acuses'
+      : null;
+  const visibleItems = exclusivePath
+    ? SIDEBAR_ITEMS.filter((item) => item.to === exclusivePath)
     : SIDEBAR_ITEMS;
 
   return (

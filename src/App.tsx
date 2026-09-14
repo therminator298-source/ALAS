@@ -16,13 +16,26 @@ import { useSession } from '@/store/session';
 
 function HomeRedirect() {
   const { user } = useSession();
-  return <Navigate to={user.rol === 'CALENDARIO' ? '/calendario' : '/incidents'} replace />;
+  const target = user.rol === 'CALENDARIO'
+    ? '/calendario'
+    : user.rol === 'ACUSES'
+      ? '/acuses'
+      : '/incidents';
+  return <Navigate to={target} replace />;
 }
 
-function ReceptionRouteGuard() {
+type AppSection = 'recepcion' | 'calendario' | 'acuses';
+
+function SectionRouteGuard({ section }: { section: AppSection }) {
   const { user, loading } = useSession();
   if (loading) return null;
-  return user.rol === 'CALENDARIO' ? <Navigate to="/calendario" replace /> : <Outlet />;
+  if (user.rol === 'CALENDARIO' && section !== 'calendario') {
+    return <Navigate to="/calendario" replace />;
+  }
+  if (user.rol === 'ACUSES' && section !== 'acuses') {
+    return <Navigate to="/acuses" replace />;
+  }
+  return <Outlet />;
 }
 
 export default function App() {
@@ -30,14 +43,14 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Documentos imprimibles A4 — fuera del AppShell (sin sidebar/topbar) */}
-        <Route element={<ReceptionRouteGuard />}>
+        <Route element={<SectionRouteGuard section="recepcion" />}>
           <Route path="/incidents/:id/print" element={<IncidentPrint />} />
         </Route>
 
         <Route element={<AppShell />}>
           <Route index element={<HomeRedirect />} />
 
-          <Route element={<ReceptionRouteGuard />}>
+          <Route element={<SectionRouteGuard section="recepcion" />}>
             <Route path="/dashboard" element={<Dashboard />} />
 
             <Route path="/incidents" element={<IncidentsView title="Todas las incidencias" subtitle="Listado completo" />} />
@@ -55,10 +68,13 @@ export default function App() {
             <Route path="/audit" element={<Audit />} />
             <Route path="/settings" element={<Placeholder title="Configuración" phase="Fase 12" />} />
 
-            {/* Apartados nuevos (se construyen por fase, cada uno con su Supabase) */}
+          </Route>
+          <Route element={<SectionRouteGuard section="acuses" />}>
             <Route path="/acuses" element={<AcusesView />} />
           </Route>
-          <Route path="/calendario" element={<CalendarioView />} />
+          <Route element={<SectionRouteGuard section="calendario" />}>
+            <Route path="/calendario" element={<CalendarioView />} />
+          </Route>
 
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>

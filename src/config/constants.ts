@@ -128,6 +128,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   COMPRAS: 'Compras',
   AUDITOR: 'Auditor',
   CALENDARIO: 'Calendario tareas',
+  ACUSES: 'Acuses',
 };
 
 // ============================================================
@@ -162,4 +163,5 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'incident.read', 'report.view', 'report.export', 'audit.view',
   ],
   CALENDARIO: [],
+  ACUSES: [],
 };

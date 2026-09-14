@@ -23,6 +23,13 @@ const DEFAULT_VERIFY_ANON =
 export const MODULE_KEY = import.meta.env.VITE_ALAS_MODULE_KEY ?? 'calendario';
 export const LAUNCHER_URL = import.meta.env.VITE_LAUNCHER_URL ?? DEFAULT_LAUNCHER_URL;
 
+function currentModuleKey(): string {
+  if (typeof window === 'undefined') return MODULE_KEY;
+  if (window.location.pathname.startsWith('/acuses')) return 'acuses';
+  if (window.location.pathname.startsWith('/calendario')) return 'calendario';
+  return MODULE_KEY;
+}
+
 const VERIFY_URL = import.meta.env.VITE_ALAS_SSO_VERIFY_URL ?? DEFAULT_VERIFY_URL;
 const VERIFY_ANON = import.meta.env.VITE_ALAS_SSO_VERIFY_ANON_KEY ?? DEFAULT_VERIFY_ANON;
 
@@ -145,8 +152,11 @@ export async function resolveAlasSession(): Promise<AlasSsoPayload | null> {
   return loadStoredAlasSession();
 }
 
-export function hasModulePermission(payload: AlasSsoPayload, moduleKey = MODULE_KEY): boolean {
-  if (moduleKey === 'calendario' && asString(payload.role).toLowerCase() === 'calendario') return true;
+export function hasModulePermission(payload: AlasSsoPayload, moduleKey = currentModuleKey()): boolean {
+  const role = asString(payload.role).toLowerCase();
+  // Los roles exclusivos ya fueron autorizados por el Launcher para su único
+  // módulo. Las rutas internas los redirigen si intentan abrir otra sección.
+  if (role === 'calendario' || role === 'acuses') return true;
   return payload.permissions.includes(moduleKey);
 }
 
@@ -165,6 +175,7 @@ export function mapSsoRole(value: unknown): Role {
   const role = asString(value).toLowerCase();
   if (role === 'admin' || role === 'administrador') return 'ADMIN';
   if (role === 'calendario') return 'CALENDARIO';
+  if (role === 'acuses') return 'ACUSES';
   if (role === 'supervisor' || role === 'jefe_logistica') return 'SUPERVISOR_RECEPCION';
   if (role === 'compras') return 'COMPRAS';
   if (role === 'auditor' || role === 'invitado') return 'AUDITOR';
