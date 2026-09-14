@@ -24,6 +24,7 @@ import { TareaFormModal } from './TareaFormModal';
 import { TareaCardMobile } from './TareaCardMobile';
 import { TareaRowDesktop } from './TareaRowDesktop';
 import { TareaActionSheet } from './TareaActionSheet';
+import { CalendarLoader } from './CalendarLoader';
 import { estadoKey, DEPOSITOS, type Tarea } from './types';
 import {
   BAR, CHIP, DEP_CORTO, DEP_ICON, ESTADO_LABEL, DIAS, DIAS_CORTO, MESES,
@@ -46,6 +47,7 @@ const EST_ACTIVE: Record<string, string> = {
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 const DAY_PREFIX = 'day:';
 const CHIP_PREFIX = 'chip:';
+const MIN_INITIAL_LOADER_MS = 550;
 
 export function CalendarioView() {
   const { user, signOut } = useSession();
@@ -55,6 +57,8 @@ export function CalendarioView() {
   const [deposito, setDeposito] = useState<string>(DEPOSITOS[0]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const initialLoadDoneRef = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   // false = no hay Supabase configurado y se está mostrando data de mentira.
   const [live, setLive] = useState(true);
@@ -98,6 +102,8 @@ export function CalendarioView() {
   useEffect(() => {
     if (cells.length === 0) return;
     let alive = true;
+    let finishTimer: ReturnType<typeof setTimeout> | undefined;
+    const startedAt = performance.now();
     setLoading(true);
     listTareas(isoOf(cells[0]!), isoOf(cells[cells.length - 1]!))
       .then((res) => {
@@ -107,8 +113,19 @@ export function CalendarioView() {
         setLive(res.live);
       })
       .catch((e: Error) => { if (alive) setLoadError(e.message || 'No se pudieron cargar las tareas.'); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+      .finally(() => {
+        if (!alive) return;
+        const remaining = initialLoadDoneRef.current
+          ? 0
+          : Math.max(0, MIN_INITIAL_LOADER_MS - (performance.now() - startedAt));
+        finishTimer = setTimeout(() => {
+          if (!alive) return;
+          initialLoadDoneRef.current = true;
+          setLoading(false);
+          setInitialLoadDone(true);
+        }, remaining);
+      });
+    return () => { alive = false; clearTimeout(finishTimer); };
   }, [cells, reloadKey]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
@@ -360,6 +377,8 @@ export function CalendarioView() {
 
   const sortableIds = useMemo(() => listTasks.map((t) => t.id), [listTasks]);
   const listEmpty = !loading && !loadError && listTasks.length === 0;
+
+  if (!initialLoadDone) return <CalendarLoader />;
 
   return (
     <div ref={rootRef} className="flex min-h-full flex-col gap-3 bg-gradient-to-b from-brand-soft/25 to-transparent p-3 md:h-full md:p-5">

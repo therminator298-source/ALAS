@@ -157,6 +157,10 @@ try {
   page.on('pageerror', (e) => check('sin errores de JS', false, e.message));
 
   await page.goto(`${baseURL}/calendario`, { waitUntil: 'domcontentloaded' });
+  const loader = page.getByRole('status', { name: 'Cargando tareas' });
+  const loaderVisible = await loader.isVisible().catch(() => false);
+  check('loader inicial visible y descriptivo', loaderVisible);
+  if (loaderVisible) await page.screenshot({ path: `${outputDir}/mobile-loader.png`, fullPage: false });
   await page.locator('li').first().waitFor({ timeout: 15000 });
   await page.waitForTimeout(700);
   await page.screenshot({ path: `${outputDir}/mobile-lista.png`, fullPage: false });

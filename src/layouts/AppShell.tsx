@@ -7,6 +7,7 @@ import { MobileNav } from '@/components/MobileNav';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { ToastHost } from '@/components/ui/toast';
+import { CalendarLoader } from '@/features/calendario/CalendarLoader';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/store/session';
 
@@ -43,7 +44,11 @@ export function AppShell() {
     return () => ctx.revert();
   }, [location.pathname]);
 
-  if (loading) return <SessionLoading />;
+  if (loading) {
+    return location.pathname.startsWith('/calendario')
+      ? <CalendarLoader shell />
+      : <SessionLoading />;
+  }
   if (requireSso && error) return <SessionRequired error={error} onLogin={goToLauncher} />;
 
   return (

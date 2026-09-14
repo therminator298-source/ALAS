@@ -85,6 +85,7 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
       open={open}
       onClose={onClose}
       title={tarea ? 'Editar tarea' : 'Nueva tarea'}
+      eyebrow={tarea ? undefined : `Almacén · ${deposito}`}
       size="md"
       footer={
         /* Solo Cancelar y Guardar. "Eliminar" estaba acá al lado de Guardar,
@@ -143,9 +144,11 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
           </Field>
         )}
 
-        <Field label="Depósito">
-          <DepositoButtons value={deposito} onChange={setDeposito} />
-        </Field>
+        {tarea && (
+          <Field label="Almacén">
+            <DepositoButtons value={deposito} onChange={setDeposito} />
+          </Field>
+        )}
 
         <Field label="Responsable">
           <input
@@ -294,7 +297,7 @@ function TipoSelect({ value, onPick }: { value: string; onPick: (v: string) => v
   );
 }
 
-/** Depósitos: una columna en el teléfono — en `grid-cols-3` "Depósito Luque
+/** Almacenes: una columna en el teléfono — en `grid-cols-3` "Depósito Luque
  *  Sanber" a 11px se partía en tres líneas dentro de una columna de ~105px. */
 function DepositoButtons({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
