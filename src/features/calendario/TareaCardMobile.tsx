@@ -162,7 +162,7 @@ export function TareaCardMobile({ tarea, index, showDate, reorderable, onOpen, o
           {/* Título: 3 líneas completas, sin truncar a 8 caracteres */}
           <div className="flex items-start gap-2">
             <span
-              className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#218fd1] to-brand text-[11px] font-extrabold tabular-nums text-white shadow-[0_4px_10px_rgba(20,120,184,0.24)] ring-2 ring-brand/10"
+              className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[10px] font-bold tabular-nums text-white"
               aria-label={`Tarea número ${index + 1}`}
             >
               {index + 1}
