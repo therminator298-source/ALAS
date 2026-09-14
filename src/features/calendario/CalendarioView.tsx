@@ -47,7 +47,7 @@ const EST_ACTIVE: Record<string, string> = {
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 const DAY_PREFIX = 'day:';
 const CHIP_PREFIX = 'chip:';
-const MIN_INITIAL_LOADER_MS = 550;
+const MIN_LIST_LOADER_MS = 350;
 
 export function CalendarioView() {
   const { user, signOut } = useSession();
@@ -57,8 +57,6 @@ export function CalendarioView() {
   const [deposito, setDeposito] = useState<string>(DEPOSITOS[0]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
-  const initialLoadDoneRef = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   // false = no hay Supabase configurado y se está mostrando data de mentira.
   const [live, setLive] = useState(true);
@@ -115,15 +113,8 @@ export function CalendarioView() {
       .catch((e: Error) => { if (alive) setLoadError(e.message || 'No se pudieron cargar las tareas.'); })
       .finally(() => {
         if (!alive) return;
-        const remaining = initialLoadDoneRef.current
-          ? 0
-          : Math.max(0, MIN_INITIAL_LOADER_MS - (performance.now() - startedAt));
-        finishTimer = setTimeout(() => {
-          if (!alive) return;
-          initialLoadDoneRef.current = true;
-          setLoading(false);
-          setInitialLoadDone(true);
-        }, remaining);
+        const remaining = Math.max(0, MIN_LIST_LOADER_MS - (performance.now() - startedAt));
+        finishTimer = setTimeout(() => { if (alive) setLoading(false); }, remaining);
       });
     return () => { alive = false; clearTimeout(finishTimer); };
   }, [cells, reloadKey]);
@@ -202,7 +193,6 @@ export function CalendarioView() {
     if (!rootRef.current || reduceMotion()) return;
     const ctx = gsap.context(() => {
       gsap.from('.dep-seg', { opacity: 0, y: -8, duration: 0.45, ease: 'back.out(1.6)', clearProps: 'all' });
-      gsap.from('.cal-panel', { opacity: 0, y: 18, duration: 0.55, stagger: 0.09, ease: 'power3.out', clearProps: 'all', delay: 0.05 });
     }, rootRef.current);
     return () => ctx.revert();
   }, []);
@@ -378,8 +368,6 @@ export function CalendarioView() {
   const sortableIds = useMemo(() => listTasks.map((t) => t.id), [listTasks]);
   const listEmpty = !loading && !loadError && listTasks.length === 0;
 
-  if (!initialLoadDone) return <CalendarLoader />;
-
   return (
     <div ref={rootRef} className="flex min-h-full flex-col gap-3 bg-gradient-to-b from-brand-soft/25 to-transparent p-3 md:h-full md:p-5">
       {/* ── Cabecera ─────────────────────────────────────────────────────────
@@ -426,10 +414,6 @@ export function CalendarioView() {
             onChange={setDeposito}
           />
         </div>
-
-        <button className="btn-primary hidden shrink-0 bg-gradient-to-br from-[#1478b8] to-brand md:inline-flex" onClick={() => openNew(selectedDay ?? tISO)}>
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva tarea
-        </button>
 
       </div>
 
@@ -567,7 +551,7 @@ export function CalendarioView() {
           </div>
 
           {/* ── Lista de tareas ── */}
-          <div className="cal-panel card flex flex-col overflow-hidden ring-1 ring-brand/10 md:min-h-0 md:flex-1">
+          <div className="cal-panel cal-task-panel card flex flex-col overflow-hidden ring-1 ring-brand/10 md:min-h-0 md:flex-1">
             {/* En móvil esta cabecera repetía mes, cantidad y depósito que ya
                 aparecen arriba. Se conserva completa donde sí aporta: escritorio. */}
             <div className="hidden shrink-0 items-center justify-between gap-2 bg-gradient-to-r from-[#1478b8] to-brand px-4 py-3 text-white shadow-[0_2px_10px_rgba(20,120,184,0.25)] md:flex">
@@ -650,7 +634,7 @@ export function CalendarioView() {
 
             <div ref={listRef} className="p-2.5 pb-24 md:min-h-0 md:flex-1 md:overflow-y-auto md:pb-2.5">
               {loading ? (
-                <ListSkeleton touch={isTouch} />
+                <CalendarLoader />
               ) : loadError ? (
                 <LoadError message={loadError} onRetry={reload} />
               ) : listEmpty ? (
@@ -895,17 +879,6 @@ function UserMenu({ nombre, onSignOut }: { nombre: string; onSignOut: () => void
   );
 }
 
-function ListSkeleton({ touch }: { touch: boolean }) {
-  return (
-    <div className="space-y-2.5" aria-hidden>
-      {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className={cn('animate-pulse rounded-2xl border border-border bg-surface-2', touch ? 'h-[132px]' : 'h-[74px]')} />
-      ))}
-      <span className="sr-only">Cargando tareas…</span>
-    </div>
-  );
-}
-
 function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center gap-3 p-8 text-center" role="alert">
@@ -949,7 +922,7 @@ function EmptyList({
       {filtered ? (
         <button onClick={onClear} className="btn-secondary min-h-[44px]"><X className="h-4 w-4" /> Limpiar filtros</button>
       ) : (
-        <button onClick={onNew} className="btn-primary min-h-[44px] bg-gradient-to-br from-[#1478b8] to-brand shadow-[0_6px_16px_rgba(20,120,184,0.30)]">
+        <button onClick={onNew} className="btn-primary hidden min-h-[44px] bg-gradient-to-br from-[#1478b8] to-brand shadow-[0_6px_16px_rgba(20,120,184,0.30)] md:inline-flex">
           <Plus className="h-4 w-4" strokeWidth={2.5} /> Agregar tarea
         </button>
       )}

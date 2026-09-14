@@ -74,6 +74,7 @@ async function fixture(context) {
     if (url.pathname === '/rest/v1/tareas') {
       const method = request.method();
       if (method === 'GET') {
+        await new Promise((resolve) => setTimeout(resolve, 250));
         const [from, to] = url.searchParams.getAll('fecha').map((v) => v.slice(4));
         return route.fulfill({ json: state.rows.filter((t) => t.fecha >= from && t.fecha <= to) });
       }
@@ -158,7 +159,7 @@ try {
 
   await page.goto(`${baseURL}/calendario`, { waitUntil: 'domcontentloaded' });
   const loader = page.getByRole('status', { name: 'Cargando tareas' });
-  const loaderVisible = await loader.isVisible().catch(() => false);
+  const loaderVisible = await loader.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
   check('loader inicial visible y descriptivo', loaderVisible);
   if (loaderVisible) await page.screenshot({ path: `${outputDir}/mobile-loader.png`, fullPage: false });
   await page.locator('li').first().waitFor({ timeout: 15000 });
@@ -198,6 +199,14 @@ try {
   }, LARGO);
   check('título largo visible completo', !!titulo && titulo.completo && titulo.texto,
     titulo ? `ancho ${titulo.ancho}px, alto ${titulo.alto}px (antes ~70px de ancho, 1 línea)` : 'no se encontró el título');
+
+  /* 4b ─ En vacío móvil, la única creación es el botón flotante */
+  const search = page.getByRole('searchbox', { name: 'Buscar tarea o responsable' });
+  await search.fill('__sin_resultados__');
+  const centerAddVisible = await page.getByRole('button', { name: 'Agregar tarea', exact: true }).isVisible().catch(() => false);
+  const fabVisible = await page.getByRole('button', { name: 'Nueva tarea', exact: true }).isVisible().catch(() => false);
+  check('estado vacío usa solo el botón flotante', !centerAddVisible && fabVisible);
+  await search.fill('');
 
   /* 5 ─ Swipe cambia el estado */
   const antes = await page.locator('li').first().locator('button').first().textContent();
