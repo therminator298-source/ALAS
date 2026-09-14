@@ -60,8 +60,11 @@ export function TareaRowDesktop({ tarea, index, reorderable, onOpen, onEstado }:
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <span className="grid h-7 min-w-[38px] shrink-0 place-items-center rounded-lg bg-brand-soft px-1.5 text-[10px] font-extrabold tracking-wide text-brand ring-1 ring-brand/15 transition-colors group-hover:bg-brand group-hover:text-white">
-        #{String(index + 1).padStart(2, '0')}
+      <span
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#218fd1] to-brand text-[11px] font-extrabold tabular-nums text-white shadow-[0_4px_10px_rgba(20,120,184,0.24)] ring-2 ring-brand/10"
+        aria-label={`Tarea número ${index + 1}`}
+      >
+        {index + 1}
       </span>
 
       <div className={cn('flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border', EST_BADGE[k])}>

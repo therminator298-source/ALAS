@@ -42,6 +42,7 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
   const [descripcion, setDescripcion] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const DepositoIcon = DEP_ICON[deposito] ?? Tag;
 
   useEffect(() => {
     if (!open) return;
@@ -85,7 +86,15 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
       open={open}
       onClose={onClose}
       title={tarea ? 'Editar tarea' : 'Nueva tarea'}
-      eyebrow={tarea ? undefined : `Almacén · ${deposito}`}
+      eyebrow={tarea ? undefined : (
+        <span
+          className="inline-flex max-w-full items-center gap-2 rounded-full bg-gradient-to-r from-[#1478b8] to-brand px-3 py-1.5 text-[11px] font-extrabold normal-case tracking-normal text-white shadow-[0_6px_16px_rgba(20,120,184,0.28)] ring-1 ring-white/30"
+          aria-label={`Almacén seleccionado: ${deposito}`}
+        >
+          <DepositoIcon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span className="truncate">Almacén · {deposito}</span>
+        </span>
+      )}
       size="md"
       footer={
         /* Solo Cancelar y Guardar. "Eliminar" estaba acá al lado de Guardar,
@@ -127,14 +136,14 @@ export function TareaFormModal({ open, tarea, defaultFecha, defaultDeposito, onC
           <p className="mt-1.5 text-[11px] font-medium text-ink-3">Se mostrará debajo del título en la tarjeta.</p>
         </Field>
 
-        {/* Fecha y hora a ancho completo en móvil: son los dos campos más
-            usados y en `grid-cols-2` quedaban en ~150px cada uno. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Fecha y hora juntas también en móvil para leer la programación
+            completa de un vistazo. */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <Field label="Fecha *">
-            <input type="date" aria-label="Fecha de la tarea" className="input min-h-[48px]" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            <input type="date" aria-label="Fecha de la tarea" className="input min-h-[48px] min-w-0" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </Field>
           <Field label="Hora">
-            <input type="time" aria-label="Hora de la tarea" className="input min-h-[48px]" value={hora} onChange={(e) => setHora(e.target.value)} />
+            <input type="time" aria-label="Hora de la tarea" className="input min-h-[48px] min-w-0" value={hora} onChange={(e) => setHora(e.target.value)} />
           </Field>
         </div>
 
@@ -238,11 +247,8 @@ function EstadoButtons({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
-/**
- * Seleccionador de tipo de tarea. El popover ahora se dibuja en un portal: era
- * `absolute` dentro del cuerpo scrolleable del modal y, siendo el primer campo
- * de una hoja de 92dvh, sus 6 opciones quedaban cortadas en el teléfono.
- */
+/** Selector de tipo en cuadrícula: permite reconocer cada tarea por su ícono
+ * y mantiene las seis opciones visibles sin una lista larga en el teléfono. */
 function TipoSelect({ value, onPick }: { value: string; onPick: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -270,28 +276,40 @@ function TipoSelect({ value, onPick }: { value: string; onPick: (v: string) => v
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
 
-      <Popover open={open} anchorRef={btnRef} onClose={() => setOpen(false)} matchWidth>
-        {TAREA_TIPOS.map((tp) => {
-          const on = tp === sel;
-          const Icon = TIPO_ICONS[tp] ?? Tag;
-          return (
-            <button
-              key={tp}
-              type="button"
-              onClick={() => { onPick(tp === 'OTROS' ? '' : tp); setOpen(false); }}
-              className={cn(
-                'flex min-h-[52px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm font-semibold transition-colors',
-                on ? 'bg-brand-soft text-brand' : 'text-ink active:bg-surface-3',
-              )}
-            >
-              <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-lg', on ? 'bg-gradient-to-br from-[#1478b8] to-brand text-white' : 'bg-surface-3 text-ink-2')}>
-                <Icon className="h-4 w-4" />
-              </span>
-              <span className="truncate">{tp === 'OTROS' ? 'Otros (escribir)…' : tp}</span>
-              {on && <Check className="ml-auto h-4 w-4 shrink-0" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
+      <Popover open={open} anchorRef={btnRef} onClose={() => setOpen(false)} matchWidth className="rounded-2xl">
+        <div className="grid grid-cols-2 gap-2">
+          {TAREA_TIPOS.map((tp) => {
+            const on = tp === sel;
+            const Icon = TIPO_ICONS[tp] ?? Tag;
+            return (
+              <button
+                key={tp}
+                type="button"
+                aria-pressed={on}
+                onClick={() => { onPick(tp === 'OTROS' ? '' : tp); setOpen(false); }}
+                className={cn(
+                  'relative flex min-h-[84px] min-w-0 flex-col items-start justify-between gap-2 rounded-xl border p-3 text-left text-xs font-extrabold leading-tight transition-all active:scale-[0.97]',
+                  on
+                    ? 'border-brand bg-gradient-to-br from-[#1478b8] to-brand text-white shadow-[0_8px_20px_rgba(20,120,184,0.28)]'
+                    : 'border-border bg-surface-2/60 text-ink-2 active:border-brand/40 active:bg-brand-soft/40',
+                )}
+              >
+                <span className={cn(
+                  'grid h-9 w-9 shrink-0 place-items-center rounded-xl',
+                  on ? 'bg-white/20 text-white ring-1 ring-white/25' : 'bg-brand-soft text-brand',
+                )}>
+                  <Icon className="h-5 w-5" strokeWidth={2.1} />
+                </span>
+                <span className="max-w-full break-words">{tp === 'OTROS' ? 'OTROS (ESCRIBIR)' : tp}</span>
+                {on && (
+                  <span className="absolute right-2.5 top-2.5 grid h-5 w-5 place-items-center rounded-full bg-white text-brand shadow-sm">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </Popover>
     </>
   );
@@ -341,7 +359,7 @@ function DepositoButtons({ value, onChange }: { value: string; onChange: (v: str
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="block">
+    <div className="block min-w-0">
       <span className="mb-1.5 block text-xs font-semibold text-ink-2">{label}</span>
       {children}
     </div>

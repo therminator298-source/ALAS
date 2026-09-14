@@ -159,16 +159,15 @@ export function TareaCardMobile({ tarea, index, showDate, reorderable, onOpen, o
         <span className={cn('absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl', BAR[k])} />
 
         <div className="min-w-0 flex-1">
-          <div className="mb-1.5 flex items-center gap-2">
-            <span className="inline-flex h-6 items-center rounded-lg bg-brand-soft px-2 text-[10px] font-extrabold tracking-[0.08em] text-brand ring-1 ring-brand/15">
-              #{String(index + 1).padStart(2, '0')}
-            </span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-ink-3">Tarea</span>
-          </div>
-
           {/* Título: 3 líneas completas, sin truncar a 8 caracteres */}
           <div className="flex items-start gap-2">
-            <h3 className="text-base font-extrabold leading-snug text-ink line-clamp-3">{tarea.titulo}</h3>
+            <span
+              className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#218fd1] to-brand text-[11px] font-extrabold tabular-nums text-white shadow-[0_4px_10px_rgba(20,120,184,0.24)] ring-2 ring-brand/10"
+              aria-label={`Tarea número ${index + 1}`}
+            >
+              {index + 1}
+            </span>
+            <h3 className="min-w-0 flex-1 text-base font-extrabold leading-snug text-ink line-clamp-3">{tarea.titulo}</h3>
           </div>
 
           {tarea.descripcion && (

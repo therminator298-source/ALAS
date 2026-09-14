@@ -12,7 +12,7 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
   dismissable?: boolean;
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   subtitle?: string;
   className?: string;
 }
