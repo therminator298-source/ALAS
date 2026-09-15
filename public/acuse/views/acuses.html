@@ -7,7 +7,7 @@
   <script src="/acuse/js/ui-protection.js?v=20260428-1" defer></script>
   <link href="/acuse/vendor/fontawesome-free/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link href="/acuse/css/alas-theme.css?v=20260511-2" rel="stylesheet">
+  <link href="/acuse/css/alas-theme.css?v=20260914-1" rel="stylesheet">
   <link href="/acuse/css/table-motion.css?v=20260512-1" rel="stylesheet">
   <link href="/acuse/css/date-picker-pro.css" rel="stylesheet">
 </head>
@@ -203,7 +203,7 @@
                   </div>
                   <div class="acuse-step__body">
                     <div class="acuse-step__title">Datos</div>
-                    <div class="acuse-step__desc">Fecha, cliente y repartidor</div>
+                    <div class="acuse-step__desc">Fecha y cliente; repartidor opcional</div>
                   </div>
                 </div>
                 <div class="acuse-step acuse-step--pending" data-wizard-step="2">
@@ -233,7 +233,7 @@
               <div class="acuse-wizard__header">
                 <div>
                   <h2 class="modal__title" id="wizardHeaderTitle">Nuevo Acuse Operativo</h2>
-                  <p class="acuse-wizard__subtitle" id="wizardHeaderSubtitle">Complet&aacute; la fecha, el repartidor y los datos del cliente.</p>
+                  <p class="acuse-wizard__subtitle" id="wizardHeaderSubtitle">Complet&aacute; la fecha y los datos del cliente. El repartidor es opcional.</p>
                 </div>
                 <button class="modal__close" type="button" onclick="closeAcuseModal()" aria-label="Cerrar modal">x</button>
               </div>
@@ -248,13 +248,13 @@
                         <label class="wizard-label" for="fechaEmision">Fecha de emisi&oacute;n <span class="wizard-label__req">*</span></label>
                         <input type="date" class="wizard-input" id="fechaEmision" required autocomplete="off">
                       </div>
-                      <div class="wizard-field wizard-field--repartidor wizard-field--checkable" data-complete-target="repartidor">
-                        <label class="wizard-label" for="repartidorSearch">Repartidor</label>
-                        <button class="wizard-inline-action wizard-inline-action--repartidor" type="button" onclick="openRepartidorModal()"><i class="fas fa-plus"></i> Nuevo repartidor</button>
+                      <div class="wizard-field wizard-field--with-action wizard-field--checkable" data-complete-target="repartidor">
+                        <label class="wizard-label" for="repartidorSearch">Repartidor <span class="wizard-label__optional">Opcional</span></label>
+                        <button class="wizard-inline-action wizard-inline-action--field" type="button" onclick="openRepartidorModal()"><i class="fas fa-plus"></i> Nuevo repartidor</button>
                         <div class="combo-field acuse-combo acuse-combo--filterlike">
                           <div class="acuse-combo__control" data-combo-trigger="repartidorSearch" tabindex="0" role="button" aria-haspopup="listbox">
                             <span class="acuse-combo__dot" aria-hidden="true"></span>
-                            <span class="acuse-combo__value acuse-combo__value--placeholder" data-combo-value>Seleccionar repartidor</span>
+                            <span class="acuse-combo__value acuse-combo__value--placeholder" data-combo-value>Sin repartidor</span>
                             <button type="button" class="acuse-combo__clear" data-clear-combo="repartidorSearch" aria-label="Limpiar repartidor">
                               <i class="fas fa-times"></i>
                             </button>
@@ -263,7 +263,7 @@
                           <div class="combo-menu combo-menu--short combo-menu--wizard" id="repartidorSuggestions" role="listbox">
                             <div class="combo-menu__search">
                               <i class="fas fa-search combo-menu__search-icon"></i>
-                              <input type="text" class="acuse-combo__search" id="repartidorSearch" placeholder="Buscar repartidor" data-display-placeholder="Seleccionar repartidor" autocomplete="off" aria-autocomplete="list" aria-expanded="false" spellcheck="false">
+                              <input type="text" class="acuse-combo__search" id="repartidorSearch" placeholder="Buscar repartidor" data-display-placeholder="Sin repartidor" autocomplete="off" aria-autocomplete="list" aria-expanded="false" spellcheck="false">
                             </div>
                             <div class="combo-menu__list" id="repartidorSuggestionsList"></div>
                           </div>
@@ -275,8 +275,9 @@
                     </div>
 
                     <div class="wizard-grid wizard-grid--2">
-                      <div class="wizard-field wizard-field--checkable" data-complete-target="cliente">
+                      <div class="wizard-field wizard-field--with-action wizard-field--checkable" data-complete-target="cliente">
                         <label class="wizard-label" for="clienteSearch">Cliente <span class="wizard-label__req">*</span></label>
+                        <button class="wizard-inline-action wizard-inline-action--field" type="button" onclick="openClienteModal()"><i class="fas fa-user-plus"></i> Nuevo cliente</button>
                         <div class="combo-field acuse-combo acuse-combo--filterlike">
                           <div class="acuse-combo__control" data-combo-trigger="clienteSearch" tabindex="0" role="button" aria-haspopup="listbox">
                             <span class="acuse-combo__dot" aria-hidden="true"></span>
@@ -332,8 +333,9 @@
                     <div class="wizard-section-label">Agregar mercader&iacute;a</div>
 
                     <div class="wizard-grid wizard-grid--detail">
-                      <div class="wizard-field wizard-field--checkable" data-complete-target="mercaderia">
+                      <div class="wizard-field wizard-field--with-action wizard-field--checkable" data-complete-target="mercaderia">
                         <label class="wizard-label" for="mercaderiaSearch">Mercader&iacute;a <span class="wizard-label__req">*</span></label>
+                        <button class="wizard-inline-action wizard-inline-action--field" type="button" onclick="openArticuloModal()"><i class="fas fa-box-open"></i> Nueva mercader&iacute;a</button>
                         <div class="combo-field acuse-combo acuse-combo--filterlike">
                           <div class="acuse-combo__control" data-combo-trigger="mercaderiaSearch" tabindex="0" role="button" aria-haspopup="listbox">
                             <span class="acuse-combo__dot" aria-hidden="true"></span>
@@ -526,6 +528,94 @@
       </dialog>
     </div>
 
+    <div class="modal-backdrop" id="clienteModalWrapper">
+      <dialog class="modal modal--catalog" id="clienteModalDialog" aria-modal="true" aria-labelledby="clienteModalTitle">
+        <div class="modal__header modal__header--compact modal-catalog__header">
+          <div>
+            <h2 class="modal__title" id="clienteModalTitle">Nuevo cliente</h2>
+            <div class="modal__subtitle">Registr&aacute; el cliente y usalo directamente en este acuse</div>
+          </div>
+          <button class="modal__close" type="button" onclick="closeClienteModal()" aria-label="Cerrar modal de cliente">&times;</button>
+        </div>
+        <div class="modal__content modal__content--compact">
+          <div class="wizard-grid wizard-grid--2">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteCodigo">C&oacute;digo <span class="wizard-label__req">*</span></label>
+              <input type="text" class="wizard-input" id="nuevoClienteCodigo" maxlength="80" placeholder="Ej: C1050" autocomplete="off">
+            </div>
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteNombre">Nombre o raz&oacute;n social <span class="wizard-label__req">*</span></label>
+              <input type="text" class="wizard-input" id="nuevoClienteNombre" maxlength="180" placeholder="Nombre del cliente" autocomplete="off">
+            </div>
+          </div>
+          <div class="wizard-grid wizard-grid--2">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteRuc">RUC</label>
+              <input type="text" class="wizard-input" id="nuevoClienteRuc" maxlength="40" placeholder="Opcional" autocomplete="off">
+            </div>
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteTelefono">Tel&eacute;fono</label>
+              <input type="text" class="wizard-input" id="nuevoClienteTelefono" maxlength="60" placeholder="Opcional" autocomplete="off">
+            </div>
+          </div>
+          <div class="wizard-grid wizard-grid--2">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteCiudad">Ciudad</label>
+              <input type="text" class="wizard-input" id="nuevoClienteCiudad" maxlength="120" placeholder="Opcional" autocomplete="off">
+            </div>
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteZona">Zona</label>
+              <input type="text" class="wizard-input" id="nuevoClienteZona" maxlength="120" placeholder="Opcional" autocomplete="off">
+            </div>
+          </div>
+          <div class="wizard-grid wizard-grid--1">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoClienteDireccion">Direcci&oacute;n</label>
+              <input type="text" class="wizard-input" id="nuevoClienteDireccion" maxlength="220" placeholder="Opcional" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <div class="modal__footer modal__footer--compact">
+          <button class="btn btn--secondary btn--compact" type="button" onclick="closeClienteModal()">Cancelar</button>
+          <button class="btn btn--primary btn--compact" type="button" id="btnGuardarCliente" onclick="guardarNuevoCliente()"><i class="fas fa-save"></i> Guardar cliente</button>
+        </div>
+      </dialog>
+    </div>
+
+    <div class="modal-backdrop" id="articuloModalWrapper">
+      <dialog class="modal modal--catalog modal--catalog-small" id="articuloModalDialog" aria-modal="true" aria-labelledby="articuloModalTitle">
+        <div class="modal__header modal__header--compact modal-catalog__header">
+          <div>
+            <h2 class="modal__title" id="articuloModalTitle">Nueva mercader&iacute;a</h2>
+            <div class="modal__subtitle">Registr&aacute; la mercader&iacute;a y agregala al detalle del acuse</div>
+          </div>
+          <button class="modal__close" type="button" onclick="closeArticuloModal()" aria-label="Cerrar modal de mercader&iacute;a">&times;</button>
+        </div>
+        <div class="modal__content modal__content--compact">
+          <div class="wizard-grid wizard-grid--2 wizard-grid--catalog-item">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoArticuloCodigo">C&oacute;digo <span class="wizard-label__req">*</span></label>
+              <input type="text" class="wizard-input" id="nuevoArticuloCodigo" maxlength="80" placeholder="Ej: MERC-001" autocomplete="off">
+            </div>
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoArticuloUm">Unidad de medida</label>
+              <input type="text" class="wizard-input wizard-input--center" id="nuevoArticuloUm" maxlength="20" value="UN" placeholder="UN" autocomplete="off">
+            </div>
+          </div>
+          <div class="wizard-grid wizard-grid--1">
+            <div class="wizard-field">
+              <label class="wizard-label" for="nuevoArticuloDescripcion">Descripci&oacute;n <span class="wizard-label__req">*</span></label>
+              <input type="text" class="wizard-input" id="nuevoArticuloDescripcion" maxlength="220" placeholder="Descripci&oacute;n de la mercader&iacute;a" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <div class="modal__footer modal__footer--compact">
+          <button class="btn btn--secondary btn--compact" type="button" onclick="closeArticuloModal()">Cancelar</button>
+          <button class="btn btn--primary btn--compact" type="button" id="btnGuardarArticulo" onclick="guardarNuevoArticulo()"><i class="fas fa-save"></i> Guardar mercader&iacute;a</button>
+        </div>
+      </dialog>
+    </div>
+
     <div class="modal-backdrop" id="anulacionConfirmModalWrapper">
       <dialog class="modal" id="anulacionConfirmDialog" aria-modal="true" aria-labelledby="anulacionConfirmTitle" style="max-width:440px; padding:0; overflow:hidden;">
         <div style="background-color:var(--color-bg-primary); text-align:center; padding:32px 24px;">
@@ -600,10 +690,10 @@
   </div>
 
   <script src="/acuse/js/alas-layout.js?v=20260428-1"></script>
-  <script src="/acuse/js/acuse-api.js?v=20260428-1"></script>
+  <script src="/acuse/js/acuse-api.js?v=20260914-1"></script>
   <script src="/acuse/js/shared/alas-shared.js?v=20260512-1"></script>
   <script src="/acuse/js/storage-utils.js?v=20260511-1"></script>
   <script src="/acuse/js/date-picker-pro.js?v=20260428-1"></script>
-  <script src="/acuse/js/acuses-api.js?v=20260511-2"></script>
+  <script src="/acuse/js/acuses-api.js?v=20260914-1"></script>
 </body>
 </html>

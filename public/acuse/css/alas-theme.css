@@ -3655,11 +3655,11 @@ thead .table__row:hover > .table__cell,
   gap: 6px;
 }
 
-.wizard-field--repartidor {
+.wizard-field--with-action {
   position: relative;
 }
 
-.wizard-field--repartidor .wizard-label {
+.wizard-field--with-action .wizard-label {
   padding-right: 150px;
 }
 
@@ -3687,11 +3687,57 @@ thead .table__row:hover > .table__cell,
   transform: translateY(-1px);
 }
 
-.wizard-inline-action--repartidor {
+.wizard-inline-action--field {
   position: absolute;
   top: -2px;
   right: 0;
   z-index: 1;
+}
+
+.wizard-label__optional {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 7px;
+  color: #2563eb;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  border-radius: 999px;
+}
+
+.modal--catalog {
+  width: min(640px, calc(100vw - 32px));
+  max-width: 640px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.modal--catalog-small {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+}
+
+.modal-catalog__header {
+  background: linear-gradient(135deg, #f8fbff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e8edf4;
+}
+
+.modal-catalog__header .modal__title {
+  color: var(--color-primary);
+}
+
+.modal--catalog .modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wizard-grid--catalog-item {
+  grid-template-columns: minmax(0, 2fr) minmax(110px, 0.75fr);
 }
 
 .wizard-label {

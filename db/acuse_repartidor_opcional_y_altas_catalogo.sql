@@ -1,9 +1,9 @@
 -- ============================================================================
--- ALAS · Acuses: guardado transaccional de cabecera, detalle e historial
+-- ALAS · Acuses: repartidor opcional y altas manuales de catálogos
 --
--- Ejecutar una vez en Supabase SQL Editor antes de publicar el cliente que usa
--- esta RPC. Toda la función corre en una única transacción de PostgreSQL: si
--- falla una mercadería, no queda un acuse incompleto.
+-- Ejecutar una vez en Supabase SQL Editor antes de publicar el cliente.
+-- Mantiene clientes y artículos sin INSERT directo para anon/authenticated:
+-- las altas pasan por RPC con validaciones y permisos mínimos.
 -- ============================================================================
 
 create or replace function guardar_acuse_atomico(
@@ -169,4 +169,112 @@ revoke all on function guardar_acuse_atomico(bigint, text, text, date, date, big
 grant execute on function guardar_acuse_atomico(bigint, text, text, date, date, bigint, text, text, jsonb) to anon, authenticated;
 
 comment on function guardar_acuse_atomico(bigint, text, text, date, date, bigint, text, text, jsonb)
-  is 'Crea o actualiza un acuse completo de forma transaccional, con repartidor opcional, y toma los datos maestros desde los catálogos.';
+  is 'Crea o actualiza un acuse completo de forma transaccional, con repartidor opcional.';
+
+create or replace function crear_cliente_acuse(
+  p_cod_cliente text,
+  p_nombre      text,
+  p_ruc         text,
+  p_direccion   text,
+  p_ciudad      text,
+  p_zona        text,
+  p_telefono    text
+)
+returns table (
+  cod_cliente text,
+  nombre      text,
+  ruc         text,
+  direccion   text,
+  ciudad      text,
+  zona        text,
+  telefono    text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_codigo text := upper(nullif(btrim(p_cod_cliente), ''));
+begin
+  if v_codigo is null then
+    raise exception 'El código del cliente es obligatorio.' using errcode = '22023';
+  end if;
+  if nullif(btrim(p_nombre), '') is null then
+    raise exception 'El nombre del cliente es obligatorio.' using errcode = '22023';
+  end if;
+  if exists (select 1 from clientes c where lower(c.cod_cliente) = lower(v_codigo)) then
+    raise exception 'Ya existe un cliente con el código %.', v_codigo using errcode = '23505';
+  end if;
+
+  insert into clientes (cod_cliente, nombre, ruc, direccion, ciudad, zona, telefono)
+  values (
+    v_codigo,
+    btrim(p_nombre),
+    nullif(btrim(p_ruc), ''),
+    nullif(btrim(p_direccion), ''),
+    nullif(btrim(p_ciudad), ''),
+    nullif(btrim(p_zona), ''),
+    nullif(btrim(p_telefono), '')
+  );
+
+  return query
+  select c.cod_cliente, c.nombre, c.ruc, c.direccion, c.ciudad, c.zona, c.telefono
+    from clientes c
+   where c.cod_cliente = v_codigo;
+end;
+$$;
+
+revoke all on function crear_cliente_acuse(text, text, text, text, text, text, text) from public;
+grant execute on function crear_cliente_acuse(text, text, text, text, text, text, text) to anon, authenticated;
+
+comment on function crear_cliente_acuse(text, text, text, text, text, text, text)
+  is 'Registra manualmente un cliente desde Acuses sin habilitar INSERT directo al catálogo.';
+
+create or replace function crear_articulo_acuse(
+  p_material    text,
+  p_descripcion text,
+  p_um           text
+)
+returns table (
+  material    text,
+  descripcion text,
+  um          text,
+  status      text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_material text := upper(nullif(btrim(p_material), ''));
+begin
+  if v_material is null then
+    raise exception 'El código de la mercadería es obligatorio.' using errcode = '22023';
+  end if;
+  if nullif(btrim(p_descripcion), '') is null then
+    raise exception 'La descripción de la mercadería es obligatoria.' using errcode = '22023';
+  end if;
+  if exists (select 1 from articulos a where lower(a.material) = lower(v_material)) then
+    raise exception 'Ya existe una mercadería con el código %.', v_material using errcode = '23505';
+  end if;
+
+  insert into articulos (material, descripcion, um, status)
+  values (
+    v_material,
+    btrim(p_descripcion),
+    coalesce(nullif(upper(btrim(p_um)), ''), 'UN'),
+    'Activo'
+  );
+
+  return query
+  select a.material, a.descripcion, a.um, a.status
+    from articulos a
+   where a.material = v_material;
+end;
+$$;
+
+revoke all on function crear_articulo_acuse(text, text, text) from public;
+grant execute on function crear_articulo_acuse(text, text, text) to anon, authenticated;
+
+comment on function crear_articulo_acuse(text, text, text)
+  is 'Registra manualmente una mercadería desde Acuses sin habilitar INSERT directo al catálogo.';

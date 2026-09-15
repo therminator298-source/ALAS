@@ -402,12 +402,46 @@
     var r = await query;
     return { items: (r.data || []).map(function (c) { return { Cod_Cliente: c.cod_cliente, Nom_Cliente: c.nombre, Ruc_Cliente: c.ruc, Direc_Cliente: c.direccion, Ciudad_Cliente: c.ciudad, Zona_Cliente: c.zona, Telefono_Cliente: c.telefono }; }) };
   }
+  async function createCliente(client, body) {
+    var codigo = String(body.Cod_Cliente || body.cod_cliente || '').trim();
+    var nombre = String(body.Nom_Cliente || body.nombre || '').trim();
+    if (!codigo) throw httpError(400, 'El código del cliente es obligatorio');
+    if (!nombre) throw httpError(400, 'El nombre del cliente es obligatorio');
+    var r = await client.rpc('crear_cliente_acuse', {
+      p_cod_cliente: codigo,
+      p_nombre: nombre,
+      p_ruc: body.Ruc_Cliente || body.ruc || null,
+      p_direccion: body.Direc_Cliente || body.direccion || null,
+      p_ciudad: body.Ciudad_Cliente || body.ciudad || null,
+      p_zona: body.Zona_Cliente || body.zona || null,
+      p_telefono: body.Telefono_Cliente || body.telefono || null
+    });
+    if (r.error) throw httpError(400, r.error.message);
+    var c = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!c) throw httpError(500, 'Supabase no devolvió el cliente creado.');
+    return { Cod_Cliente: c.cod_cliente, Nom_Cliente: c.nombre, Ruc_Cliente: c.ruc, Direc_Cliente: c.direccion, Ciudad_Cliente: c.ciudad, Zona_Cliente: c.zona, Telefono_Cliente: c.telefono };
+  }
   async function catArticulos(client, q) {
     var query = client.from('articulos').select('material,descripcion,um').order('descripcion').limit(Math.min(parseInt(q.limit, 10) || 50, 200));
     var s = (q.q || q.search || '').trim();
     if (s) query = query.or('material.ilike.%' + s + '%,descripcion.ilike.%' + s + '%');
     var r = await query;
     return { items: (r.data || []).map(function (a) { return { Material_SAP: a.material, Descr_SAP: a.descripcion, UM_SAP: a.um }; }) };
+  }
+  async function createArticulo(client, body) {
+    var material = String(body.Material_SAP || body.material || '').trim();
+    var descripcion = String(body.Descr_SAP || body.descripcion || '').trim();
+    if (!material) throw httpError(400, 'El código de la mercadería es obligatorio');
+    if (!descripcion) throw httpError(400, 'La descripción de la mercadería es obligatoria');
+    var r = await client.rpc('crear_articulo_acuse', {
+      p_material: material,
+      p_descripcion: descripcion,
+      p_um: body.UM_SAP || body.um || 'UN'
+    });
+    if (r.error) throw httpError(400, r.error.message);
+    var a = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!a) throw httpError(500, 'Supabase no devolvió la mercadería creada.');
+    return { Material_SAP: a.material, Descr_SAP: a.descripcion, UM_SAP: a.um, Status_SAP: a.status };
   }
 
   /* ── Dashboard interactivo ──────────────────────────────────────────────── */
@@ -617,8 +651,10 @@
     if (path === '/api/repartidores' && method === 'GET') return catRepartidores(client);
     if (path === '/api/repartidores' && method === 'POST') return createRepartidor(client, body || {});
     if (path === '/api/repartidores/resumen') return { items: [] };
-    if (path === '/api/clientes') return catClientes(client, query);
-    if (path === '/api/articulos') return catArticulos(client, query);
+    if (path === '/api/clientes' && method === 'GET') return catClientes(client, query);
+    if (path === '/api/clientes' && method === 'POST') return createCliente(client, body || {});
+    if (path === '/api/articulos' && method === 'GET') return catArticulos(client, query);
+    if (path === '/api/articulos' && method === 'POST') return createArticulo(client, body || {});
     if (seg[0] === 'articulos' && (seg[2] === 'stock' || seg[2] === 'precios')) return { items: [] };
 
     // acuses

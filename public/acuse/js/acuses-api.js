@@ -50,7 +50,7 @@
   const acuseWizardMeta = {
     1: {
       title: 'Datos del acuse',
-      subtitle: 'Completa la fecha, el repartidor y los datos del cliente.'
+      subtitle: 'Completa la fecha y los datos del cliente. El repartidor es opcional.'
     },
     2: {
       title: 'Mercaderias',
@@ -780,6 +780,8 @@
     const ids = [
       'printPreviewModalWrapper',
       'anulacionConfirmModalWrapper',
+      'articuloModalWrapper',
+      'clienteModalWrapper',
       'repartidorModalWrapper',
       'fichaModalWrapper',
       'acuseModalWrapper'
@@ -844,6 +846,8 @@
       ['acuseModalWrapper', () => window.closeAcuseModal()],
       ['fichaModalWrapper', () => window.closeFichaAcuse()],
       ['repartidorModalWrapper', () => window.closeRepartidorModal()],
+      ['clienteModalWrapper', () => window.closeClienteModal()],
+      ['articuloModalWrapper', () => window.closeArticuloModal()],
       ['anulacionConfirmModalWrapper', () => window.cancelarAnulacion()],
       ['printPreviewModalWrapper', () => window.cerrarVistaPreviaImpresion()]
     ];
@@ -863,6 +867,8 @@
       event.preventDefault();
       if (openId === 'printPreviewModalWrapper') window.cerrarVistaPreviaImpresion();
       else if (openId === 'anulacionConfirmModalWrapper') window.cancelarAnulacion();
+      else if (openId === 'articuloModalWrapper') window.closeArticuloModal();
+      else if (openId === 'clienteModalWrapper') window.closeClienteModal();
       else if (openId === 'repartidorModalWrapper') window.closeRepartidorModal();
       else if (openId === 'fichaModalWrapper') window.closeFichaAcuse();
       else window.closeAcuseModal();
@@ -2251,6 +2257,95 @@
     }
   };
 
+  window.openClienteModal = function openClienteModal() {
+    ['nuevoClienteCodigo', 'nuevoClienteNombre', 'nuevoClienteRuc', 'nuevoClienteTelefono', 'nuevoClienteCiudad', 'nuevoClienteZona', 'nuevoClienteDireccion']
+      .forEach((id) => setValue(id, ''));
+    openModalBackdrop('clienteModalWrapper', {
+      onAfterOpen: () => document.getElementById('nuevoClienteCodigo')?.focus()
+    });
+  };
+
+  window.closeClienteModal = function closeClienteModal() {
+    closeModalBackdrop('clienteModalWrapper');
+  };
+
+  window.guardarNuevoCliente = async function guardarNuevoCliente() {
+    const codigo = getValue('nuevoClienteCodigo');
+    const nombre = getValue('nuevoClienteNombre');
+    const btn = document.getElementById('btnGuardarCliente');
+
+    if (!codigo || !nombre) {
+      notify('Ingresa el código y el nombre del cliente.', 'error');
+      document.getElementById(!codigo ? 'nuevoClienteCodigo' : 'nuevoClienteNombre')?.focus();
+      return;
+    }
+
+    setButtonLoading(btn, true);
+    try {
+      const cliente = await AcuseAPI.post('/api/clientes', {
+        Cod_Cliente: codigo,
+        Nom_Cliente: nombre,
+        Ruc_Cliente: getValue('nuevoClienteRuc') || null,
+        Telefono_Cliente: getValue('nuevoClienteTelefono') || null,
+        Ciudad_Cliente: getValue('nuevoClienteCiudad') || null,
+        Zona_Cliente: getValue('nuevoClienteZona') || null,
+        Direc_Cliente: getValue('nuevoClienteDireccion') || null
+      });
+      invalidateCatalogoCache(catalogCacheNames.clientes);
+      mergeClientes([cliente]);
+      fillClientes(cliente.Cod_Cliente);
+      closeClienteModal();
+      notify('Cliente agregado y seleccionado correctamente.', 'success');
+    } catch (error) {
+      notify(error.message, 'error');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  };
+
+  window.openArticuloModal = function openArticuloModal() {
+    setValue('nuevoArticuloCodigo', '');
+    setValue('nuevoArticuloDescripcion', '');
+    setValue('nuevoArticuloUm', 'UN');
+    openModalBackdrop('articuloModalWrapper', {
+      onAfterOpen: () => document.getElementById('nuevoArticuloCodigo')?.focus()
+    });
+  };
+
+  window.closeArticuloModal = function closeArticuloModal() {
+    closeModalBackdrop('articuloModalWrapper');
+  };
+
+  window.guardarNuevoArticulo = async function guardarNuevoArticulo() {
+    const codigo = getValue('nuevoArticuloCodigo');
+    const descripcion = getValue('nuevoArticuloDescripcion');
+    const btn = document.getElementById('btnGuardarArticulo');
+
+    if (!codigo || !descripcion) {
+      notify('Ingresa el código y la descripción de la mercadería.', 'error');
+      document.getElementById(!codigo ? 'nuevoArticuloCodigo' : 'nuevoArticuloDescripcion')?.focus();
+      return;
+    }
+
+    setButtonLoading(btn, true);
+    try {
+      const articulo = await AcuseAPI.post('/api/articulos', {
+        Material_SAP: codigo,
+        Descr_SAP: descripcion,
+        UM_SAP: getValue('nuevoArticuloUm') || 'UN'
+      });
+      invalidateCatalogoCache(catalogCacheNames.articulos);
+      mergeArticulos([articulo]);
+      fillArticulos(articulo.Material_SAP);
+      closeArticuloModal();
+      notify('Mercadería agregada y seleccionada correctamente.', 'success');
+    } catch (error) {
+      notify(error.message, 'error');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  };
+
   window.closeAcuseModal = function closeAcuseModal(options = {}) {
     const successActive = Boolean(options?.success)
       || document.getElementById('successOverlay')?.classList.contains('success-overlay--active');
@@ -2408,15 +2503,13 @@
 
   function validateWizardStepOne() {
     const fecha = getValue('fechaEmision');
-    const repartidor = getValue('repartidor');
     const cliente = getValue('cliente');
 
-    if (fecha && repartidor && cliente) return true;
+    if (fecha && cliente) return true;
 
     if (!fecha) markWizardFieldError('fechaEmision');
-    if (!repartidor) markWizardFieldError('repartidor');
     if (!cliente) markWizardFieldError('clienteSearch');
-    notify('Completa fecha, repartidor y cliente antes de continuar.', 'error');
+    notify('Completa la fecha y el cliente antes de continuar.', 'error');
     return false;
   }
 
@@ -2463,7 +2556,8 @@
   function buildAcusePreview() {
     const cliente = getSelectedClienteData();
     setText('previewFecha', formatPreviewDate(getValue('fechaEmision')) || '--');
-    setText('previewRepartidor', getValue('repartidorSearch') || getSelectedOptionText('repartidor') || '--');
+    const repartidorId = getValue('repartidor');
+    setText('previewRepartidor', repartidorId ? (getValue('repartidorSearch') || getSelectedOptionText('repartidor')) : 'Sin asignar');
     setText('previewCliente', getValue('clienteSearch') || (cliente ? clienteLabel(cliente) : '--'));
     setText('previewRuc', cliente?.Ruc_Cliente || '--');
     setText('previewDireccion', cliente?.Direc_Cliente || '--');
@@ -2625,8 +2719,8 @@
     const hasDetallePendiente = getValue('mercaderiaSearch') || getValue('mercaderia') || getValue('cantidad') || getValue('um') || getValue('notaDetalle');
     const detalles = detalleEnFormulario ? [...detallesDraft, detalleEnFormulario] : [...detallesDraft];
 
-    if (!fecha || !idRepartidor || !codCliente) {
-      notify('Completa fecha, repartidor y cliente.', 'error');
+    if (!fecha || !codCliente) {
+      notify('Completa la fecha y el cliente.', 'error');
       return null;
     }
 
@@ -2649,7 +2743,7 @@
       Estado: estado,
       Fecha_Emision: fecha,
       Fecha_Entrega: fechaEntrega,
-      ID_Repartidor: Number(idRepartidor),
+      ID_Repartidor: idRepartidor ? Number(idRepartidor) : null,
       Zona: zona,
       Observacion: getValue('observacion') || null,
       Usuario: usuario,
