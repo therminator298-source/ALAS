@@ -1,7 +1,6 @@
 import { forwardRef, useState } from 'react';
 import { Camera, ImageOff, Package, Clock } from 'lucide-react';
 import { ReasonBadge } from '@/components/ui/ReasonBadge';
-import { PriorityBadge } from '@/components/ui/PriorityBadge';
 import { REASON_STYLES } from '@/config/constants';
 import { fmtAge, cn } from '@/lib/utils';
 import type { BoardIncident } from '@/services/board';
@@ -30,23 +29,33 @@ function Miniatura({ inc }: { inc: BoardIncident }) {
   const acento = REASON_STYLES[inc.reason]?.soft ?? 'bg-surface-3';
   const hayFoto = Boolean(inc.first_photo_url) && !fallo;
 
+  /* Sin foto la tarjeta NO reserva el hueco de la foto.
+     Con el recuadro 4:3 fijo, una incidencia sin evidencia se llevaba 260 px
+     de color plano y entraban dos tarjetas por columna en vez de cinco. El
+     espacio en blanco tiene que costar algo: si no hay nada que mostrar, la
+     tarjeta se encoge y deja lugar a las que siguen.
+
+     Importa más de lo que parece mientras nadie suba fotos: hoy todas las
+     incidencias de la base tienen evidences_count = 0. */
+  if (!hayFoto) {
+    return (
+      <div className={cn('flex items-center gap-1.5 px-3 py-1.5 text-ink-3', acento)}>
+        <ImageOff className="h-3.5 w-3.5 opacity-55" strokeWidth={1.75} />
+        <span className="text-2xs font-semibold">{fallo ? 'Foto no disponible' : 'Sin foto'}</span>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('relative aspect-[4/3] w-full overflow-hidden rounded-t-card', acento)}>
-      {hayFoto ? (
-        <img
-          src={inc.first_photo_url as string}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onError={() => setFallo(true)}
-          className="h-full w-full object-cover transition-transform duration-500 ease-smooth group-hover:scale-[1.04]"
-        />
-      ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-ink-3">
-          <ImageOff className="h-5 w-5 opacity-50" strokeWidth={1.75} />
-          <span className="text-2xs font-semibold">{fallo ? 'Foto no disponible' : 'Sin foto'}</span>
-        </div>
-      )}
+      <img
+        src={inc.first_photo_url as string}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setFallo(true)}
+        className="h-full w-full object-cover transition-transform duration-500 ease-smooth group-hover:scale-[1.04]"
+      />
 
       {/* El contador de fotos, sobre la imagen. Va con degradado abajo y no con
           una pastilla opaca: sobre una foto clara una pastilla tapa, y sobre
@@ -96,12 +105,13 @@ export const BoardCard = forwardRef<HTMLDivElement, Props>(function BoardCard(
       <Miniatura inc={inc} />
 
       <div className="space-y-2.5 p-3 pl-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 truncate text-sm font-bold leading-tight text-ink">
-            {inc.supplier_nombre ?? 'Sin proveedor'}
-          </h3>
-          <PriorityBadge priority={inc.priority} />
-        </div>
+        {/* Sale la insignia de prioridad. Competía con el proveedor por el
+            mismo renglón y lo obligaba a truncarse antes de tiempo, y el dato
+            no se estaba usando para nada: se carga en Normal por defecto y
+            casi nunca se cambia. El nombre se queda con la línea entera. */}
+        <h3 className="truncate text-sm font-bold leading-tight text-ink">
+          {inc.supplier_nombre ?? 'Sin proveedor'}
+        </h3>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <ReasonBadge reason={inc.reason} />

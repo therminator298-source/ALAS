@@ -6,12 +6,13 @@ import {
   useSensor, useSensors, useDraggable, useDroppable, closestCorners,
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core';
-import { Plus, RefreshCw, AlertTriangle, Inbox } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, Inbox, Boxes, PackagePlus, PackageMinus, PackageX } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { SegStrip, type SegItem } from '@/components/SegStrip';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/components/ui/toast';
 import { useSession } from '@/store/session';
-import { PRIMARY_REASONS, REASON_LABELS, REASON_STYLES, STATUS_TRANSITIONS } from '@/config/constants';
+import { PRIMARY_REASONS, REASON_LABELS, STATUS_TRANSITIONS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 import {
   listBoard, agruparPorColumna, cambiarEstadoBoard,
@@ -70,26 +71,37 @@ export function IncidentsBoard() {
   const raiz = useRef<HTMLDivElement>(null);
   const primeraCarga = useRef(true);
 
+  /* Se trae TODO una vez y el motivo se filtra acá.
+     Antes cada clic en el filtro era una consulta nueva al servidor. Dos
+     razones para cambiarlo, y la segunda es la que manda: el segmentado
+     muestra cuántas hay de cada motivo, y esos números no se pueden saber
+     mirando un resultado que ya viene filtrado —con Faltante puesto, Sobrante
+     y Averiado valdrían cero y parecería que no existen—. De paso, cambiar de
+     filtro pasa a ser instantáneo y no vuelve a pedir nada. */
   const cargar = useCallback(async () => {
     setCargando(true);
-    const r = await listBoard(reason);
+    const r = await listBoard(null);
     setRows(r.rows);
     setSource(r.source);
     setCargando(false);
-  }, [reason]);
+  }, []);
 
   useEffect(() => {
     let vivo = true;
-    listBoard(reason).then((r) => {
+    listBoard(null).then((r) => {
       if (!vivo) return;
       setRows(r.rows);
       setSource(r.source);
       setCargando(false);
     });
     return () => { vivo = false; };
-  }, [reason]);
+  }, []);
 
-  const columnas = useMemo(() => agruparPorColumna(rows), [rows]);
+  const visibles = useMemo(
+    () => (reason ? rows.filter((r) => r.reason === reason) : rows),
+    [rows, reason],
+  );
+  const columnas = useMemo(() => agruparPorColumna(visibles), [visibles]);
 
   /* ── Animaciones ───────────────────────────────────────────────────────────
      Mismo lenguaje que el resto de la app: power2.out / back.out(1.6),
@@ -115,7 +127,7 @@ export function IncidentsBoard() {
       });
     }, raiz);
     return () => ctx.revert();
-  }, [cargando, rows, reason]);
+  }, [cargando, visibles]);
 
   /* ── Arrastre ───────────────────────────────────────────────────────────── */
   const sensores = useSensors(
@@ -166,7 +178,7 @@ export function IncidentsBoard() {
        ninguno, así que sin esto el título arranca debajo de la barra lateral y
        se le come la primera letra. Mismo p-5/p-6 y mismo techo de ancho que
        Proveedores y Productos, para que las tres pantallas alineen. */
-    <div ref={raiz} className="mx-auto flex h-full min-h-0 max-w-[1600px] flex-col p-5 md:p-6">
+    <div ref={raiz} className="flex h-full min-h-0 flex-col p-5 md:p-6">
       <PageHeader
         title="Tablero de incidencias"
         subtitle="Las más nuevas, arriba"
@@ -264,20 +276,25 @@ function etiqueta(s: BoardStatus): string {
   return BOARD_COLUMNS.find((c) => c.status === s)?.label ?? s;
 }
 
-/* La pastilla activa va con el color PLENO del motivo y texto blanco, no con
-   el fondo suave de la insignia. El fondo suave es para una etiqueta sobre
-   superficie blanca; acá el mismo color claro con texto claro encima quedaba
-   ilegible, y además no se distinguía de las pastillas apagadas.
-
-   Escritas enteras porque Tailwind no compila clases armadas por
-   concatenación: `bg-${motivo}` nunca llega a existir en el CSS. */
-const PASTILLA_ACTIVA: Partial<Record<IncidentReason, string>> = {
-  SOBRANTE: 'border-transparent bg-sobrante text-white shadow-sm',
-  FALTANTE: 'border-transparent bg-faltante text-white shadow-sm',
-  AVERIADO: 'border-transparent bg-averiado text-white shadow-sm',
+/* El ícono de cada motivo. Sobrante suma, Faltante resta, Averiado se rompe:
+   la forma dice lo mismo que la palabra, así el segmentado se lee de reojo. */
+const ICONO_MOTIVO: Partial<Record<IncidentReason, typeof Boxes>> = {
+  SOBRANTE: PackagePlus,
+  FALTANTE: PackageMinus,
+  AVERIADO: PackageX,
 };
 
-/** Filtros de motivo. Los tres primarios del negocio, más "Todos". */
+const TODOS = 'TODOS';
+
+/**
+ * El filtro de motivo, con el mismo segmentado que usa Calendario para elegir
+ * depósito (SegStrip). Gana tres cosas sobre las pastillas que había antes:
+ * cada opción trae su contador, los segmentos se reparten el ancho en vez de
+ * amontonarse a la izquierda, y son objetivos grandes para el dedo.
+ *
+ * Los contadores salen de `rows` SIN filtrar. Si salieran de lo que se ve, con
+ * un motivo elegido los otros dos marcarían cero y parecería que no existen.
+ */
 function FiltroMotivo({
   valor, onChange, rows,
 }: {
@@ -285,72 +302,32 @@ function FiltroMotivo({
   onChange: (r: IncidentReason | null) => void;
   rows: BoardIncident[];
 }) {
-  // El total se cuenta sobre lo que hay en pantalla; los de cada motivo, no:
-  // con un filtro puesto el resto valdría cero y parecería que no existen.
-  const total = rows.length;
+  const items: SegItem[] = useMemo(() => {
+    const cuenta = (r: IncidentReason) => rows.filter((x) => x.reason === r).length;
+    return [
+      { value: TODOS, label: 'Todos', icon: Boxes, count: rows.length },
+      ...PRIMARY_REASONS.map((r) => ({
+        value: r,
+        label: REASON_LABELS[r],
+        icon: ICONO_MOTIVO[r] ?? Boxes,
+        count: cuenta(r),
+      })),
+    ];
+  }, [rows]);
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <Pastilla activa={valor === null} onClick={() => onChange(null)}>
-        Todos {valor === null && <b className="tabular-nums opacity-70">{total}</b>}
-      </Pastilla>
-      {PRIMARY_REASONS.map((r) => {
-        const s = REASON_STYLES[r];
-        const activa = valor === r;
-        return (
-          <Pastilla
-            key={r}
-            activa={activa}
-            onClick={() => onChange(activa ? null : r)}
-            activaClass={PASTILLA_ACTIVA[r]}
-          >
-            <span
-              className={cn('h-1.5 w-1.5 rounded-full', activa ? 'bg-white/90' : s?.dot)}
-              aria-hidden
-            />
-            {REASON_LABELS[r]}
-            {activa && <b className="tabular-nums opacity-70">{total}</b>}
-          </Pastilla>
-        );
-      })}
+    <div className="mb-3">
+      <SegStrip
+        equal
+        inline
+        items={items}
+        value={valor ?? TODOS}
+        onChange={(v) => onChange(v === TODOS ? null : (v as IncidentReason))}
+      />
     </div>
   );
 }
 
-/**
- * `activaClass` REEMPLAZA al azul de marca, no se suma.
- *
- * Sumarlas no funciona: cn() acá es un join de strings, no tailwind-merge, así
- * que la clase quedaba con `bg-brand` y `bg-averiado` juntas y ganaba la que
- * Tailwind emitiera más abajo en la hoja —no la última del atributo—. Por eso
- * la pastilla de Averiado salía azul oscura en vez de naranja.
- */
-function Pastilla({
-  activa, onClick, activaClass, children,
-}: {
-  activa: boolean;
-  onClick: () => void;
-  activaClass?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={activa}
-      className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-bold',
-        'transition-all duration-200 ease-smooth active:scale-[0.97]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35',
-        activa
-          ? (activaClass ?? 'border-transparent bg-brand text-white shadow-sm')
-          : 'border-border bg-surface text-ink-2 hover:border-border-strong hover:bg-surface-3',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 /** Una columna del tablero. */
 function Columna({
@@ -369,7 +346,11 @@ function Columna({
   return (
     <section
       className={cn(
-        'board-col flex w-[264px] flex-none flex-col rounded-card border bg-surface-2 transition-colors duration-200',
+        /* flex-1 con piso de 248px: en pantalla ancha las cinco columnas se
+           reparten todo el espacio —antes quedaban fijas en 264 y sobraban
+           300px a la derecha— y en pantalla angosta dejan de achicarse y pasan
+           a scrollear, que es cuando repartir sería contraproducente. */
+        'board-col flex min-w-[248px] flex-1 shrink-0 basis-0 flex-col rounded-card border bg-surface-2 transition-colors duration-200',
         isOver ? 'border-brand bg-brand-soft/40' : 'border-border',
       )}
     >
