@@ -316,9 +316,14 @@ function FiltroMotivo({
   }, [rows]);
 
   return (
+    /* Sin `equal`: el segmentado se dimensiona a su contenido en vez de
+       estirarse a todo el ancho. Repartir el ancho tiene sentido cuando cada
+       segmento es un destino grande —como los depósitos del Calendario, que
+       son la navegación principal de esa pantalla—; acá son cuatro filtros
+       cortos, y estirados dejaban un hueco enorme entre el ícono y el número
+       que hacía que cada opción se leyera como tres cosas sueltas. */
     <div className="mb-3">
       <SegStrip
-        equal
         inline
         items={items}
         value={valor ?? TODOS}
