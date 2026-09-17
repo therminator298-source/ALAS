@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { Plus, Search, X, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Camera, Clock, ShieldCheck } from 'lucide-react';
@@ -9,13 +9,12 @@ import { ReasonBadge } from '@/components/ui/ReasonBadge';
 import { PriorityBadge } from '@/components/ui/PriorityBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonTable } from '@/components/ui/SkeletonTable';
-import { listIncidents, type IncidentFilters } from '@/services/incidents';
+import { listIncidents, type IncidentFilters, type SortKey, type Orden } from '@/services/incidents';
 import { PRIMARY_REASONS, REASON_LABELS } from '@/config/constants';
 import { fmtAge, fmtDateTime, cn } from '@/lib/utils';
 import { PhotoModal } from './PhotoModal';
 import type { Incident, IncidentReason, IncidentStatus } from '@/types';
 
-type SortKey = 'created_at' | 'supplier_nombre' | 'status' | 'age';
 type SortDir = 'asc' | 'desc';
 
 interface IncidentsViewProps {
@@ -37,7 +36,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [reason, setReason] = useState<IncidentReason | null>(null);
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'created_at', dir: 'desc' });
+  const [sort, setSort] = useState<Orden>({ key: 'created_at', dir: 'desc' });
 
   // Segmentado Pendientes / Verificados (solo cuando la vista no tiene estado fijo)
   const [segStatus, setSegStatus] = useState<IncidentStatus>('PENDIENTE');
@@ -54,7 +53,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => setPage(1), [debounced, reason, effectiveStatus]);
+  useEffect(() => setPage(1), [debounced, reason, effectiveStatus, sort]);
 
   useEffect(() => {
     let alive = true;
@@ -64,7 +63,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
       reason: reason ?? undefined,
       search: debounced || undefined,
     };
-    listIncidents(filters, page, PAGE_SIZE).then((res) => {
+    listIncidents(filters, page, PAGE_SIZE, sort).then((res) => {
       if (!alive) return;
       setRows(res.rows);
       setTotal(res.total);
@@ -74,7 +73,7 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
     return () => {
       alive = false;
     };
-  }, [effectiveStatus, reason, debounced, page, refreshKey]);
+  }, [effectiveStatus, reason, debounced, page, refreshKey, sort]);
 
   // Contadores del segmentado (Pendientes / Verificados) — solo si no hay estado fijo
   useEffect(() => {
@@ -92,29 +91,12 @@ export function IncidentsView({ title, subtitle, fixedStatus }: IncidentsViewPro
     };
   }, [fixedStatus, refreshKey]);
 
-  const sorted = useMemo(() => {
-    const arr = [...rows];
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    arr.sort((a, b) => {
-      let av: string | number = '';
-      let bv: string | number = '';
-      if (sort.key === 'age') {
-        av = new Date(a.created_at).getTime();
-        bv = new Date(b.created_at).getTime();
-      } else if (sort.key === 'created_at') {
-        av = a.created_at;
-        bv = b.created_at;
-      } else if (sort.key === 'supplier_nombre') {
-        av = a.supplier_nombre ?? '';
-        bv = b.supplier_nombre ?? '';
-      } else {
-        av = a.status;
-        bv = b.status;
-      }
-      return av < bv ? -dir : av > bv ? dir : 0;
-    });
-    return arr;
-  }, [rows, sort]);
+  /* El orden lo hace Postgres, no esto.
+     Acá había un sort sobre `rows`, que son sólo los 25 de la página actual:
+     tocar "Proveedor" reordenaba lo que estabas viendo y dejaba el resto de
+     la tabla como estaba. Con una página se veía bien; con cien incidencias
+     ordenaba un cuarto de la tabla y parecía que funcionaba. */
+  const sorted = rows;
 
   useEffect(() => {
     if (loading || !tbodyRef.current) return;
