@@ -3,6 +3,7 @@ import { AppShell } from '@/layouts/AppShell';
 import { Dashboard } from '@/pages/Dashboard';
 import { Placeholder } from '@/pages/Placeholder';
 import { IncidentsView } from '@/features/incidents/IncidentsView';
+import { IncidentsBoard } from '@/features/incidents/board/IncidentsBoard';
 import { NewIncident } from '@/features/incidents/NewIncident';
 import { IncidentDetail } from '@/features/incidents/IncidentDetail';
 import { Reports } from '@/pages/Reports';
@@ -53,7 +54,13 @@ export default function App() {
           <Route element={<SectionRouteGuard section="recepcion" />}>
             <Route path="/dashboard" element={<Dashboard />} />
 
-            <Route path="/incidents" element={<IncidentsView title="Todas las incidencias" subtitle="Listado completo" />} />
+            {/* El tablero es la vista principal de Incidencias. La tabla no se
+                fue: vive en /incidents/list, que sigue siendo mejor para
+                buscar por número o exportar. El segmento estático le gana al
+                :id de más abajo en el ranking de React Router, así que no hay
+                que ordenarlas a mano. */}
+            <Route path="/incidents" element={<IncidentsBoard />} />
+            <Route path="/incidents/list" element={<IncidentsView title="Todas las incidencias" subtitle="Listado completo" />} />
             <Route path="/incidents/new" element={<NewIncident />} />
             <Route path="/incidents/pending" element={<IncidentsView title="Pendientes" fixedStatus="PENDIENTE" />} />
             <Route path="/incidents/review" element={<IncidentsView title="En revisión" fixedStatus="EN_REVISION" />} />

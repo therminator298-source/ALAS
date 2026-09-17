@@ -30,7 +30,8 @@ export const NAV: NavItem[] = [
     icon: ClipboardList,
     children: [
       { label: 'Nueva incidencia', to: '/incidents/new' },
-      { label: 'Todas', to: '/incidents' },
+      { label: 'Tablero', to: '/incidents' },
+      { label: 'Todas (lista)', to: '/incidents/list' },
       { label: 'Pendientes', to: '/incidents/pending', badgeKey: 'pendientes' },
       { label: 'En revisión', to: '/incidents/review', badgeKey: 'revision' },
       { label: 'Verificadas', to: '/incidents/verified', badgeKey: 'verificados' },
