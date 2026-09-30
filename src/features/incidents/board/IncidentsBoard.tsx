@@ -170,8 +170,19 @@ export function IncidentsBoard() {
   const hecho = () => { setPendiente(null); cargar(); };
 
   /* Se estrecha una sola vez, acá, en vez de dejar que cada rama de
-     AvisoConexion vuelva a preguntar de qué variante se trata. */
-  const fallback: BoardFallback | null = source.kind === 'live' ? null : source;
+     AvisoConexion vuelva a preguntar de qué variante se trata.
+
+     'sin-config' queda afuera: era un mensaje de puesta a punto —faltan las
+     variables en .env.local— dirigido a quien instala, no a quien usa el
+     tablero. Ya están puestas y apuntan al mismo proyecto que Calendario y
+     Acuses, así que no vuelve a aparecer.
+
+     Las otras dos SÍ se avisan, y no es lo mismo: significan que la base
+     está caída o que falta la vista, o sea que las tarjetas en pantalla son
+     inventadas. En un depósito, actuar sobre una incidencia que no existe es
+     caro; el cartel es lo único que separa ese caso de un tablero normal. */
+  const fallback: AvisoSource | null =
+    source.kind === 'live' || source.kind === 'sin-config' ? null : source;
 
   return (
     /* El padding lo pone la página, no el layout: .alas-model-content no trae
@@ -179,11 +190,14 @@ export function IncidentsBoard() {
        se le come la primera letra. Mismo p-5/p-6 y mismo techo de ancho que
        Proveedores y Productos, para que las tres pantallas alineen. */
     <div ref={raiz} className="flex h-full min-h-0 flex-col p-5 md:p-6">
+      {/* El filtro de motivo sube a la línea del título, en el centro. Ganaba
+          poco estando en su propio renglón —empujaba las columnas hacia abajo
+          y el tablero es una pantalla donde el alto es lo que escasea. */}
       <PageHeader
         title="Tablero de incidencias"
-        subtitle="Las más nuevas, arriba"
+        center={<FiltroMotivo valor={reason} onChange={setReason} rows={rows} />}
         actions={
-          <div className="flex items-center gap-2">
+          <>
             <button className="btn-secondary" onClick={cargar} disabled={cargando}>
               <RefreshCw className={cn('h-4 w-4', cargando && 'animate-spin')} strokeWidth={2.25} />
               Actualizar
@@ -191,11 +205,9 @@ export function IncidentsBoard() {
             <button className="btn-primary" onClick={() => navigate('/incidents/new')}>
               <Plus className="h-4 w-4" strokeWidth={2.5} /> Nueva incidencia
             </button>
-          </div>
+          </>
         }
       />
-
-      <FiltroMotivo valor={reason} onChange={setReason} rows={rows} />
 
       {fallback && <AvisoConexion source={fallback} />}
 
@@ -424,20 +436,26 @@ function Esqueleto() {
 }
 
 /**
+ * Las causas de fallback que SÍ se avisan en pantalla.
+ *
+ * Queda afuera 'sin-config' —faltan las variables de entorno—, que es un aviso
+ * de instalación y no algo que le pase a quien está usando el tablero.
+ */
+type AvisoSource = Exclude<BoardFallback, { kind: 'sin-config' }>;
+
+/**
  * El cartel de "esto que ves no es real".
  *
- * Dice QUÉ pasó, no un "vista previa" que sirve igual para cuatro causas
+ * Dice QUÉ pasó, no un "vista previa" que sirve igual para varias causas
  * distintas. Y es un bloque de color, no una línea gris al pie: alguien que
  * abre el tablero con mala señal tiene que enterarse antes de actuar sobre
  * una incidencia que no existe.
  */
-function AvisoConexion({ source }: { source: BoardFallback }) {
+function AvisoConexion({ source }: { source: AvisoSource }) {
   const texto =
-    source.kind === 'sin-config'
-      ? 'Faltan VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env.local. Lo que ves son datos de ejemplo.'
-      : source.kind === 'sin-vista'
-        ? 'Falta la vista incidents_board. Corré db/incidents_board.sql en Supabase. Lo que ves son datos de ejemplo.'
-        : `No se pudo leer la base: ${source.detail}. Lo que ves son datos de ejemplo.`;
+    source.kind === 'sin-vista'
+      ? 'Falta la vista incidents_board. Corré db/incidents_board.sql en Supabase. Lo que ves son datos de ejemplo.'
+      : `No se pudo leer la base: ${source.detail}. Lo que ves son datos de ejemplo.`;
 
   return (
     <div className="mb-3 flex items-start gap-2.5 rounded-card border border-warn/40 bg-warn/10 px-3.5 py-2.5">

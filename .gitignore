@@ -14,3 +14,6 @@ Thumbs.db
 .vite/
 
 *.tsbuildinfo
+
+# Copias de seguridad locales (.env.local.bak y similares): llevan claves.
+*.bak
