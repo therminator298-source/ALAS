@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { LogIn, ShieldAlert } from 'lucide-react';
 import gsap from 'gsap';
@@ -65,13 +65,24 @@ export function AppShell() {
                 : 'pb-[calc(4rem+env(safe-area-inset-bottom))]',
             )}
           >
-            <Outlet />
+            <Suspense fallback={<RouteLoading />}>
+              <Outlet />
+            </Suspense>
           </main>
         </section>
         <MobileNav />
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
         <ToastHost />
       </div>
+    </div>
+  );
+}
+
+/** Mientras baja el apartado: el shell ya esta en pantalla, solo falta el centro. */
+function RouteLoading() {
+  return (
+    <div className="grid min-h-[40vh] place-items-center">
+      <span className="alas-boot" aria-label="Cargando" role="status" />
     </div>
   );
 }

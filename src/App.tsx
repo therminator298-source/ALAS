@@ -1,19 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppShell } from '@/layouts/AppShell';
-import { Dashboard } from '@/pages/Dashboard';
 import { Placeholder } from '@/pages/Placeholder';
-import { IncidentsView } from '@/features/incidents/IncidentsView';
 import { IncidentsBoard } from '@/features/incidents/board/IncidentsBoard';
-import { NewIncident } from '@/features/incidents/NewIncident';
-import { IncidentDetail } from '@/features/incidents/IncidentDetail';
-import { Reports } from '@/pages/Reports';
-import { Suppliers } from '@/pages/Suppliers';
-import { Products } from '@/pages/Products';
-import { IncidentPrint } from '@/pages/IncidentPrint';
-import { Audit } from '@/pages/Audit';
-import { AcusesView } from '@/features/acuses/AcusesView';
-import { CalendarioView } from '@/features/calendario/CalendarioView';
 import { useSession } from '@/store/session';
+
+/* Cada apartado se baja cuando se entra, no en el arranque. El tablero queda
+   estatico porque es la pantalla de entrada: hacerlo diferido agregaria un
+   viaje de red antes del primer dibujo. */
+const IncidentsView = lazy(() => import('@/features/incidents/IncidentsView').then(m => ({ default: m.IncidentsView })));
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const NewIncident = lazy(() => import('@/features/incidents/NewIncident').then(m => ({ default: m.NewIncident })));
+const IncidentDetail = lazy(() => import('@/features/incidents/IncidentDetail').then(m => ({ default: m.IncidentDetail })));
+const Reports = lazy(() => import('@/pages/Reports').then(m => ({ default: m.Reports })));
+const Suppliers = lazy(() => import('@/pages/Suppliers').then(m => ({ default: m.Suppliers })));
+const Products = lazy(() => import('@/pages/Products').then(m => ({ default: m.Products })));
+const IncidentPrint = lazy(() => import('@/pages/IncidentPrint').then(m => ({ default: m.IncidentPrint })));
+const Audit = lazy(() => import('@/pages/Audit').then(m => ({ default: m.Audit })));
+const AcusesView = lazy(() => import('@/features/acuses/AcusesView').then(m => ({ default: m.AcusesView })));
+const CalendarioView = lazy(() => import('@/features/calendario/CalendarioView').then(m => ({ default: m.CalendarioView })));
 
 function HomeRedirect() {
   const { user } = useSession();
@@ -45,7 +50,7 @@ export default function App() {
       <Routes>
         {/* Documentos imprimibles A4 — fuera del AppShell (sin sidebar/topbar) */}
         <Route element={<SectionRouteGuard section="recepcion" />}>
-          <Route path="/incidents/:id/print" element={<IncidentPrint />} />
+          <Route path="/incidents/:id/print" element={<Suspense fallback={null}><IncidentPrint /></Suspense>} />
         </Route>
 
         <Route element={<AppShell />}>

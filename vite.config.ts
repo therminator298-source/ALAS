@@ -34,6 +34,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /* Vendors aparte: tocar codigo de la app no invalida su cache, y el
+           navegador los baja en paralelo con el chunk de la pantalla. */
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (/[\/]node_modules[\/](react|react-dom|scheduler|react-router|react-router-dom)[\/]/.test(id)) return 'react';
+          if (id.includes('node_modules/gsap')) return 'gsap';
+          if (id.includes('node_modules/@supabase')) return 'supabase';
+          if (id.includes('node_modules/lucide-react')) return 'icons';
+          return 'vendor';
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     host: true,

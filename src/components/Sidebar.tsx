@@ -27,7 +27,6 @@ interface SidebarProps {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { label: 'Calendario tareas', to: '/calendario', icon: CalendarDays, match: ['/calendario'] },
   { label: 'Acuses', to: '/acuses', icon: FileText, match: ['/acuses'] },
   {
     label: 'Incidencias de recepción',
@@ -37,20 +36,25 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   },
 ];
 
+/* El Calendario no esta en la barra: solo lo ve el rol CALENDARIO, que entra
+   directo a /calendario y no tiene a donde mas ir. La ruta sigue existiendo. */
+const CALENDAR_ONLY: SidebarItem[] = [
+  { label: 'Calendario tareas', to: '/calendario', icon: CalendarDays, match: ['/calendario'] },
+];
+
 function sourceLabel(source: SessionSource): string {
   return source === 'launcher' ? 'Launcher ALAS' : 'Modo demo';
 }
 
 export function Sidebar({ user, sessionSource, onReturnToLauncher }: SidebarProps) {
   const { pathname } = useLocation();
-  const exclusivePath = user.rol === 'CALENDARIO'
-    ? '/calendario'
+  // CALENDARIO lleva su propia lista: el Calendario ya no esta en SIDEBAR_ITEMS,
+  // asi que filtrarlo por ruta dejaria la barra vacia para ese rol.
+  const visibleItems = user.rol === 'CALENDARIO'
+    ? CALENDAR_ONLY
     : user.rol === 'ACUSES'
-      ? '/acuses'
-      : null;
-  const visibleItems = exclusivePath
-    ? SIDEBAR_ITEMS.filter((item) => item.to === exclusivePath)
-    : SIDEBAR_ITEMS;
+      ? SIDEBAR_ITEMS.filter((item) => item.to === '/acuses')
+      : SIDEBAR_ITEMS;
 
   return (
     <nav className="sidebar-wave" aria-label="Barra lateral ALAS">
