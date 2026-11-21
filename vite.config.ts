@@ -45,7 +45,12 @@ export default defineConfig({
           if (id.includes('node_modules/gsap')) return 'gsap';
           if (id.includes('node_modules/@supabase')) return 'supabase';
           if (id.includes('node_modules/lucide-react')) return 'icons';
-          return 'vendor';
+          /* Nada de un chunk "vendor" que junte todo lo demas: ahi caen paquetes
+             que importan React (por ejemplo @dnd-kit) mientras react-router, que
+             esta en el chunk de React, importa de ese mismo grupo. Los dos chunks
+             quedan en ciclo y el que corre primero encuentra React a medias:
+             "Cannot read properties of undefined (reading 'useLayoutEffect')" y
+             pantalla en blanco. El resto lo reparte Rollup, que respeta el orden. */
         },
       },
     },
