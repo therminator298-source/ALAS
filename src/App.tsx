@@ -22,11 +22,10 @@ const CalendarioView = lazy(() => import('@/features/calendario/CalendarioView')
 
 function HomeRedirect() {
   const { user } = useSession();
-  const target = user.rol === 'CALENDARIO'
-    ? '/calendario'
-    : user.rol === 'ACUSES'
-      ? '/acuses'
-      : '/incidents';
+  /* La entrada es Acuses para todos. La única excepción es el rol CALENDARIO,
+     que no tiene permiso para ningún otro apartado: mandarlo a /acuses lo haría
+     rebotar en SectionRouteGuard y volver igual a /calendario. */
+  const target = user.rol === 'CALENDARIO' ? '/calendario' : '/acuses';
   return <Navigate to={target} replace />;
 }
 
