@@ -56,7 +56,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    /* 8080 y no el 5173 de Vite: es el puerto en el que el launcher busca este
+       modulo cuando corre en desarrollo (useModules.js). Con 5173 el apartado
+       nunca abria desde el launcher local. */
+    port: 8080,
     host: true,
   },
 });

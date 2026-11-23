@@ -85,6 +85,8 @@ export interface AcuseDashboard {
 }
 
 export interface AcuseFilters {
+  /** Deja afuera los anulados (activo = false). */
+  soloVigentes?: boolean;
   estado?: 'all' | AcuseEstado;
   search?: string;
   repartidorId?: number;

@@ -66,6 +66,7 @@ export async function listAcuses(
 ): Promise<{ rows: AcuseRow[]; total: number; summary: AcuseSummary; live: boolean }> {
   if (!isAcuseReady || !supabaseAcuse) {
     let rows = mockAcuses();
+    if (filters.soloVigentes) rows = rows.filter((r) => r.activo);
     if (filters.estado && filters.estado !== 'all') rows = rows.filter((r) => r.estado === filters.estado);
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -80,6 +81,7 @@ export async function listAcuses(
     .order('created_at', { ascending: false })
     .range((page - 1) * PAGE, page * PAGE - 1);
 
+  if (filters.soloVigentes) q = q.eq('activo', true);
   if (filters.estado && filters.estado !== 'all') q = q.eq('estado', filters.estado);
   if (filters.repartidorId) q = q.eq('repartidor_id', filters.repartidorId);
   if (filters.fechaDesde) q = q.gte('fecha_emision', filters.fechaDesde);
@@ -324,6 +326,7 @@ export async function downloadAcusesCsv(filters: AcuseFilters = {}): Promise<num
       .select('nro_acuse,cod_cliente,cliente_nombre,cliente_ciudad,zona,estado,fecha_emision,fecha_entrega,repartidor_nombre,usuario')
       .order('created_at', { ascending: false })
       .limit(5000);
+    if (filters.soloVigentes) q = q.eq('activo', true);
     if (filters.estado && filters.estado !== 'all') q = q.eq('estado', filters.estado);
     if (filters.search) q = q.or(`nro_acuse.ilike.%${filters.search}%,cliente_nombre.ilike.%${filters.search}%,repartidor_nombre.ilike.%${filters.search}%`);
     const { data, error } = await q;

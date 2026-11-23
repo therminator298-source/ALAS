@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import {
-  Ban, CalendarDays, CheckCircle2, ClipboardCheck, Clock, Download, LayoutGrid, Search, Truck, X,
+  Ban, CalendarDays, CheckCircle2, ClipboardCheck, Clock, Download, LayoutGrid, Plus, Search, Truck, X,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { SegStrip, type SegItem } from '@/components/SegStrip';
@@ -10,6 +10,7 @@ import { SkeletonTable } from '@/components/ui/SkeletonTable';
 import { toast } from '@/components/ui/toast';
 import { cn, fmtDate } from '@/lib/utils';
 import { AcuseEstadoBadge } from './AcuseEstadoBadge';
+import { AcuseFormModal } from './AcuseFormModal';
 import { downloadAcusesCsv, getAcuseDashboard, listAcuses, listRepartidores } from './acuseApi';
 import type { AcuseEstado, AcuseFilters, AcuseRow, Repartidor } from './types';
 
@@ -44,6 +45,10 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
   const [conteos, setConteos] = useState<Conteos | null>(null);
   const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
   const [exportando, setExportando] = useState(false);
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  // Se incrementa al guardar: vuelve a pedir filas y contadores.
+  const [refresco, setRefresco] = useState(0);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
 
   useEffect(() => {
@@ -52,6 +57,10 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
   }, [search]);
 
   const filtros: AcuseFilters = useMemo(() => ({
+    /* Un acuse anulado esta sin efecto: no entra en "Todos" ni en los demas
+       segmentos, se mira en el suyo. Asi el numero del segmento coincide con
+       las filas que trae, que es como cuenta getAcuseDashboard. */
+    soloVigentes: estado !== 'Anulado',
     estado,
     search: debounced || undefined,
     repartidorId: repartidorId === '' ? undefined : Number(repartidorId),
@@ -72,7 +81,7 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
       setLoading(false);
     });
     return () => { vivo = false; };
-  }, [filtros, page]);
+  }, [filtros, page, refresco]);
 
   /* Los contadores NO salen de las filas de la página: con 25 por página,
      sumar lo que está a la vista daría un total distinto en cada página.
@@ -88,7 +97,7 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
     });
     listRepartidores().then((r) => { if (vivo) setRepartidores(r); });
     return () => { vivo = false; };
-  }, []);
+  }, [refresco]);
 
   useEffect(() => {
     if (loading || !tbodyRef.current) return;
@@ -145,10 +154,15 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
           />
         }
         actions={
-          <button className="btn-secondary" onClick={exportar} disabled={exportando}>
-            <Download className="h-4 w-4" strokeWidth={2.2} />
-            {exportando ? 'Exportando…' : 'Exportar CSV'}
-          </button>
+          <>
+            <button className="btn-secondary" onClick={exportar} disabled={exportando}>
+              <Download className="h-4 w-4" strokeWidth={2.2} />
+              {exportando ? 'Exportando…' : 'Exportar CSV'}
+            </button>
+            <button className="btn-primary" onClick={() => { setEditId(null); setFormAbierto(true); }}>
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo acuse
+            </button>
+          </>
         }
       />
 
@@ -226,8 +240,9 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
                 <tr
                   key={a.id}
                   data-row
-                  onClick={() => onVerDetalle?.(a)}
-                  className={cn('h-[52px] transition-colors', onVerDetalle && 'hover:bg-surface-3 cursor-pointer')}
+                  onClick={() => { if (onVerDetalle) { onVerDetalle(a); return; } setEditId(a.id); setFormAbierto(true); }}
+                  className="h-[52px] transition-colors hover:bg-surface-3 cursor-pointer"
+                  title="Abrir el acuse"
                 >
                   <td className="px-4 text-ink-2 whitespace-nowrap">{fmtDate(a.fecha_emision)}</td>
                   <td className="px-4 font-mono text-xs font-bold text-brand whitespace-nowrap">{a.nro_acuse}</td>
@@ -254,7 +269,11 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
             message={hayFiltros
               ? 'Ningún acuse coincide con los filtros actuales.'
               : 'Cuando se emitan acuses de entrega aparecerán acá.'}
-            action={hayFiltros ? <button className="btn-secondary" onClick={limpiar}>Limpiar filtros</button> : undefined}
+            action={hayFiltros
+              ? <button className="btn-secondary" onClick={limpiar}>Limpiar filtros</button>
+              : <button className="btn-primary" onClick={() => { setEditId(null); setFormAbierto(true); }}>
+                  <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo acuse
+                </button>}
           />
         )}
       </div>
@@ -276,6 +295,13 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
           </div>
         )}
       </div>
+
+      <AcuseFormModal
+        open={formAbierto}
+        acuseId={editId}
+        onClose={() => setFormAbierto(false)}
+        onSaved={() => setRefresco((n) => n + 1)}
+      />
     </div>
   );
 }
