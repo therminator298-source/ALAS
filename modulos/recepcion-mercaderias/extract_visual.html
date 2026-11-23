@@ -1,0 +1,234 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modelo visual - Sidebar y Modal</title>
+  <style>
+    /*
+      Extracto visual limpio.
+      Contiene solo: fondo del sistema, barra lateral y modal principal.
+      Sin backend, sin datos reales y sin logica del proyecto original.
+    */
+    :root{
+      --primary:#0B5F8D;--primary-dark:#08486A;--accent:#3B82F6;--accent-soft:#DBEAFE;
+      --success:#10B981;--success-soft:#D1FAE5;--warning:#F59E0B;--warning-soft:#FEF3C7;
+      --danger:#EF4444;--purple:#8B5CF6;--purple-soft:#EDE9FE;
+      --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;--gray-300:#CBD5E1;
+      --gray-400:#94A3B8;--gray-500:#64748B;--gray-600:#475569;--gray-700:#334155;
+      --white:#fff;--text:#1A1A1A;--muted:#6B7280;--line:#E5E7EB;--soft-line:#F0F0F0;
+      --radius:14px;--radius-xl:24px;
+      /* ALAS Motion v2.0 (inlined — archivo standalone)
+         Al convertir en proyecto servido, reemplazar este bloque por <link> a alas-motion.css */
+      --alas-ease:cubic-bezier(0.16,1,0.3,1);--alas-ease-in:cubic-bezier(0.4,0,1,1);
+      --alas-ease-inout:cubic-bezier(0.65,0.05,0.36,1);--alas-ease-spring:cubic-bezier(0.34,1.15,0.64,1);
+      --alas-dur-fast:150ms;--alas-dur-normal:280ms;--alas-dur-page:420ms;--alas-dur-module:680ms;
+      --fast:var(--alas-dur-fast) var(--alas-ease);--base:var(--alas-dur-normal) var(--alas-ease);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    svg{display:block}
+    body{
+      min-height:100vh;
+      overflow:hidden;
+      font-family:Inter,"DM Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+      color:var(--gray-700);
+      background:linear-gradient(160deg,#9CA3AF 0%,#C4CAD4 50%,#E5E7EB 100%);
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* Fondo + contenedor base del sistema. */
+    .layout{min-height:100vh;padding:16px;display:flex;align-items:stretch}
+    .system-shell{
+      position:relative;flex:1;display:flex;height:calc(100vh - 32px);max-height:calc(100vh - 32px);
+      overflow:hidden;background:var(--white);border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,.12);
+    }
+    .stage{flex:1;margin-left:56px;padding:28px 32px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;overflow:hidden;background:#fff}
+    .brand{display:flex;align-items:center;gap:14px;color:var(--primary)}
+    .brand-mark{width:108px;height:36px;display:inline-flex;align-items:center;font-size:28px;font-weight:900;line-height:1;letter-spacing:0}
+    .brand-title{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:0}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:9px 14px;border:0;border-radius:9px;
+      font-size:13px;font-weight:700;white-space:nowrap;transition:background var(--base),box-shadow var(--base),transform var(--fast);
+    }
+    .btn svg{width:16px;height:16px}.btn:active{transform:scale(.98)}
+    .btn--primary{background:#2F6FFF;color:#fff;box-shadow:0 6px 16px rgba(47,111,255,.22)}
+    .btn--primary:hover{background:#1D4ED8;box-shadow:0 12px 24px rgba(47,111,255,.30)}
+    .btn--secondary{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);box-shadow:0 1px 3px rgba(15,23,42,.04)}
+    .btn--secondary:hover{background:var(--gray-50);border-color:var(--gray-300)}
+    .btn-ghost{background:transparent;border:0;color:var(--muted);box-shadow:none;padding-inline:4px}.btn-ghost:hover{color:var(--danger)}
+
+    /* Barra lateral extraida del dashboard. */
+    .sidebar-wave{
+      position:absolute;inset:0 auto 0 0;width:64px;overflow:hidden;transition:width .38s var(--alas-ease);
+      background:linear-gradient(180deg,#0e6fa8 0%,#0B5F8D 55%,#084f78 100%);display:flex;align-items:stretch;padding:20px 10px;z-index:20;
+      box-shadow:3px 0 10px rgba(0,0,0,.12),inset -1px 0 0 rgba(255,255,255,.06);
+    }
+    .sidebar-wave:hover{width:210px}
+    .sidebar-icons{width:100%;display:flex;flex-direction:column;gap:10px}
+    .sidebar-spacer{flex:1}
+    .sidebar-icon{
+      width:100%;height:46px;border:0;border-radius:8px;display:flex;align-items:center;gap:12px;padding:0 13px;
+      color:rgba(255,255,255,.60);background:transparent;white-space:nowrap;overflow:hidden;flex-shrink:0;
+      transition:background .22s var(--alas-ease),color .22s var(--alas-ease),box-shadow .22s var(--alas-ease);
+    }
+    .sidebar-icon svg{width:22px;height:22px;stroke-width:1.75;flex-shrink:0;transition:transform .22s var(--alas-ease)}
+    .sidebar-icon:hover{color:#fff;background:rgba(255,255,255,.10)}
+    .sidebar-icon:hover svg{transform:scale(1.08)}
+    .sidebar-icon.active{background:rgba(255,255,255,.15);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+    .sidebar-icon.active:hover{background:rgba(255,255,255,.20)}
+    .sidebar-icon .tooltip{
+      color:inherit;font-size:13px;font-weight:500;letter-spacing:.1px;white-space:nowrap;pointer-events:none;
+      opacity:0;transform:translateX(-8px);transition:opacity .25s var(--alas-ease) .08s,transform .28s var(--alas-ease) .08s;
+    }
+    .sidebar-wave:hover .sidebar-icon .tooltip{opacity:1;transform:translateX(0)}
+
+    /* Modal principal redondeado. */
+    .modal-backdrop{
+      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;
+      background:rgba(15,23,42,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);
+      z-index:100;opacity:0;visibility:hidden;pointer-events:none;
+      transition:opacity 320ms var(--alas-ease),visibility 0s linear 320ms,background-color 320ms var(--alas-ease),backdrop-filter 320ms var(--alas-ease);
+    }
+    .modal-backdrop.is-open,.modal-backdrop.is-closing{visibility:visible;transition-delay:0s}
+    .modal-backdrop.is-open{opacity:1;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:auto}
+    .modal{
+      position:relative;width:min(980px,calc(100vw - 28px));max-width:980px;max-height:94vh;overflow:hidden;
+      border-radius:var(--radius-xl);background:#fff;box-shadow:0 20px 60px rgba(0,102,204,.18),0 4px 16px rgba(0,0,0,.08);
+      display:flex;flex-direction:column;opacity:0;transform:translateY(24px) scale(.94);transform-origin:center;
+      transition:opacity 380ms var(--alas-ease),transform 380ms var(--alas-ease);
+    }
+    .modal:before{
+      content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#0066CC 0%,#003D7A 100%);
+      transform:scaleY(0);transform-origin:top;transition:transform 500ms var(--alas-ease-inout);transition-delay:180ms;pointer-events:none;z-index:2;
+    }
+    .modal-backdrop.is-open .modal{opacity:1;transform:translateY(0) scale(1)}
+    .modal-backdrop.is-open .modal:before{transform:scaleY(1)}
+    .modal-backdrop.is-closing .modal{transform-origin:left center;opacity:0;transform:translateX(-80px) scale(.92);transition:opacity 320ms var(--alas-ease-inout) 80ms,transform 420ms var(--alas-ease-in)}
+
+    .acuse-wizard-shell{display:flex;flex:1;min-height:min(760px,88vh)}
+    .acuse-wizard{display:flex;width:100%;min-height:0}
+    .acuse-wizard__sidebar{width:232px;flex-shrink:0;padding:28px 22px;background:linear-gradient(180deg,#f0f5ff 0%,#e8effe 100%);border-right:1px solid var(--soft-line);display:flex;flex-direction:column}
+    .acuse-wizard__eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:6px;padding-left:4px}
+    .acuse-wizard__sidebar-title{font-size:20px;font-weight:800;letter-spacing:0;color:var(--text);margin-bottom:28px;padding-left:4px}
+    .acuse-wizard__steps{display:flex;flex-direction:column}
+    .acuse-step{position:relative;display:flex;align-items:flex-start;gap:14px;padding-bottom:32px}
+    .acuse-step:last-child{padding-bottom:0}
+    .acuse-step:not(:last-child):after{content:"";position:absolute;left:17px;top:40px;width:2px;height:calc(100% - 40px);background:var(--line);transition:background var(--base)}
+    .acuse-step.acuse-step--completed:not(:last-child):after{background:var(--accent)}
+    .acuse-step__circle{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;flex-shrink:0;font-size:13px;font-weight:800;transition:all var(--base)}
+    .acuse-step--pending .acuse-step__circle{background:#fff;border:2px solid var(--line);color:var(--gray-400)}
+    .acuse-step--active .acuse-step__circle,.acuse-step--completed .acuse-step__circle{background:var(--accent);border:2px solid var(--accent);color:#fff}
+    .acuse-step--active .acuse-step__circle:after{content:"";position:absolute;inset:-4px;border:2px solid rgba(59,130,246,.25);border-radius:999px;animation:pulse 2s var(--alas-ease-inout) infinite}
+    .acuse-step__check{display:none}.acuse-step--completed .acuse-step__check{display:inline-flex}.acuse-step--completed .acuse-step__number{display:none}
+    .acuse-step__body{padding-top:6px}.acuse-step__title{font-size:13px;font-weight:800}.acuse-step--pending .acuse-step__title{color:var(--gray-400)}.acuse-step--active .acuse-step__title{color:var(--primary-dark)}.acuse-step--completed .acuse-step__title{color:var(--text)}
+    .acuse-step__desc{margin-top:2px;font-size:11px;line-height:1.4;color:var(--gray-400)}
+
+    .acuse-wizard__content{flex:1;display:flex;flex-direction:column;min-width:0}
+    .acuse-wizard__header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 28px 0;flex-shrink:0}
+    .modal__title{margin:0;font-size:22px;color:var(--accent);font-weight:800;letter-spacing:0}
+    .acuse-wizard__subtitle{margin:3px 0 0;font-size:13px;color:var(--gray-400)}
+    .modal__close{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:999px;background:transparent;color:#64748B;font-size:24px;line-height:1;transition:background .16s var(--alas-ease),color .16s var(--alas-ease),border-color .16s var(--alas-ease),box-shadow .16s var(--alas-ease)}
+    .modal__close:hover,.modal__close:focus-visible{background:#FEF2F2;border-color:#FECACA;color:#DC2626;box-shadow:0 8px 18px rgba(220,38,38,.12);outline:0}
+    .acuse-wizard__body{flex:1;padding:20px 28px 28px;overflow-y:auto}
+    .wizard-panel{display:none;animation:slideIn .28s var(--alas-ease)}.wizard-panel--active{display:block}
+    .wizard-section-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent)}
+    .wizard-section-label:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,.2),transparent)}
+    .wizard-grid{display:grid;gap:16px;margin-bottom:16px}.wizard-grid--1{grid-template-columns:1fr}.wizard-grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-grid--detail{grid-template-columns:minmax(0,2.5fr) .7fr 1fr}
+    .wizard-field{position:relative;display:flex;flex-direction:column;gap:6px}.wizard-label{display:inline-flex;align-items:center;gap:8px;width:fit-content;font-size:12px;font-weight:700;color:var(--muted)}.wizard-label__req{color:var(--danger)}
+    .wizard-input,.wizard-textarea{width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e6ed;border-radius:10px;background:#fff;color:#1a2332;font-size:13.5px;font-weight:600;outline:0;transition:all var(--fast);appearance:none}
+    .wizard-textarea{height:68px;padding:10px 14px;resize:vertical;line-height:1.5}
+    .wizard-input:focus,.wizard-textarea:focus,.acuse-combo__control:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.12),0 2px 8px rgba(59,130,246,.06)}
+    .wizard-input:hover:not(:focus),.wizard-textarea:hover:not(:focus),.acuse-combo__control:hover:not(:focus-within){border-color:#cbd1dc;background:#f8f9fb}
+    .wizard-input--readonly-soft{background:#f5f7fa;color:var(--muted);cursor:default}.wizard-input--center{text-align:center;font-weight:800}
+    .combo-field{position:relative}.acuse-combo__control{position:relative;display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border:1px solid #dbe3ef;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:border-color .22s var(--alas-ease),box-shadow .22s var(--alas-ease),background .22s var(--alas-ease)}
+    .acuse-combo__dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;flex-shrink:0;transition:background .22s var(--alas-ease),transform .22s var(--alas-ease)}.acuse-combo__value{flex:1;min-width:0;display:block;font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .acuse-combo__clear{width:28px;height:28px;border:0;border-radius:8px;display:none;align-items:center;justify-content:center;background:transparent;color:#9ca3af}.acuse-combo__clear:hover{background:#f1f5f9;color:#111827}.acuse-combo__caret{color:#9ca3af;pointer-events:none;transition:transform .24s var(--alas-ease),color .18s var(--alas-ease)}
+    .acuse-combo__control.has-value{border-color:#c8d8f8}.acuse-combo__control.has-value .acuse-combo__dot,.acuse-combo__control.is-open .acuse-combo__dot{background:var(--accent);transform:scale(1.2)}.acuse-combo__control.has-value .acuse-combo__clear{display:inline-flex}.acuse-combo__control.is-open .acuse-combo__caret{transform:rotate(180deg);color:var(--accent)}
+    .combo-menu{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:40;overflow:hidden;border:1px solid #dbe3ef;border-radius:16px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.08);opacity:0;visibility:hidden;transform:translateY(-8px) scale(.985);pointer-events:none;transition:opacity .22s var(--alas-ease),transform .24s var(--alas-ease),visibility .24s var(--alas-ease)}.combo-menu--open{opacity:1;visibility:visible;transform:translateY(0) scale(1);pointer-events:auto}
+    .combo-menu__search{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #edf2f7;background:#fbfdff;color:#9ca3af}.combo-menu__search input{width:100%;border:0;outline:0;background:transparent;color:#111827;font-size:14px}.combo-menu__list{max-height:180px;overflow-y:auto;padding:6px}.combo-item{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px;padding:8px 10px;border-radius:10px;color:var(--gray-600);font-size:13px;font-weight:700}.combo-item:hover,.combo-item.is-selected{color:#111827;background:#eaf2ff}
+    .wizard-summary-card{margin-bottom:20px;padding:18px 22px;border:1px solid #eef0f4;border-radius:12px;background:#f8f9fb}.wizard-summary-card__title,.wizard-preview-items-title{margin-bottom:12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--accent)}.wizard-summary-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;font-size:13px}.wizard-summary-row:not(:last-child){border-bottom:1px solid #eef0f4}.wizard-summary-row__label{color:var(--gray-400);font-weight:600}.wizard-summary-row__value{max-width:60%;text-align:right;font-weight:800;color:var(--text)}
+    .acuse-wizard__footer{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;border-top:1px solid var(--soft-line);background:#f8f9fb;flex-shrink:0}.acuse-wizard__progress-track{position:absolute;top:0;left:0;right:0;height:3px;background:var(--soft-line)}.acuse-wizard__progress-fill{height:100%;width:33.333%;background:var(--accent);border-radius:999px;transition:width .4s var(--alas-ease)}.acuse-wizard__footer-left,.acuse-wizard__footer-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.acuse-wizard__counter{font-size:12px;color:var(--gray-400);font-weight:700}
+    @keyframes slideIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+    @media(max-width:920px){.modal{width:min(100vw - 20px,900px);max-height:96vh}.acuse-wizard{flex-direction:column}.acuse-wizard__sidebar{width:100%;border-right:0;border-bottom:1px solid var(--soft-line);padding:16px 18px}.modal:before{left:0;right:0;top:0;bottom:auto;width:100%;height:3px;transform:scaleX(0);transform-origin:left}.modal-backdrop.is-open .modal:before{transform:scaleX(1)}.acuse-wizard__eyebrow,.acuse-wizard__sidebar-title{display:none}.acuse-wizard__steps{flex-direction:row;justify-content:center;gap:18px}.acuse-step{flex-direction:column;align-items:center;text-align:center;min-width:72px;padding-bottom:0}.acuse-step:not(:last-child):after,.acuse-step__desc{display:none}.wizard-grid--detail{grid-template-columns:1fr}}
+    @media(max-width:768px){body{background:var(--gray-100);overflow:auto}.layout{padding:0;min-height:100vh}.system-shell{height:100dvh;max-height:100dvh;border-radius:0;box-shadow:none}.sidebar-wave{display:none}.stage{margin-left:0;padding:16px}.brand{align-items:flex-start;flex-direction:column;gap:8px}.brand-title{font-size:23px}.wizard-grid--2{grid-template-columns:1fr}.acuse-wizard__header,.acuse-wizard__body,.acuse-wizard__footer{padding-left:18px;padding-right:18px}.acuse-wizard__footer{flex-direction:column;align-items:stretch}.acuse-wizard__footer-left,.acuse-wizard__footer-actions{justify-content:space-between}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <main class="system-shell">
+      <nav class="sidebar-wave" aria-label="Barra lateral extraida">
+        <div class="sidebar-icons">
+          <button class="sidebar-icon" type="button" aria-label="Resumen"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg><span class="tooltip">Dashboard Resumen</span></button>
+          <button class="sidebar-icon active" type="button" aria-label="Acuses"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg><span class="tooltip">Gestion de Acuses</span></button>
+          <button class="sidebar-icon" type="button" aria-label="Calendario"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span class="tooltip">Calendario</span></button>
+          <button class="sidebar-icon" type="button" aria-label="Repartidores"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="tooltip">Repartidores</span></button>
+          <button class="sidebar-icon" type="button" aria-label="Historial"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="tooltip">Historial de Acciones</span></button>
+          <div class="sidebar-spacer"></div>
+          <button class="sidebar-icon" type="button" aria-label="Volver"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg><span class="tooltip">Volver a Menu</span></button>
+        </div>
+      </nav>
+      <section class="stage"></section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="wizardHeaderTitle">
+      <div class="acuse-wizard-shell">
+        <div class="acuse-wizard">
+          <aside class="acuse-wizard__sidebar">
+            <div class="acuse-wizard__eyebrow">Nuevo acuse</div>
+            <div class="acuse-wizard__sidebar-title">Acuse Operativo</div>
+            <div class="acuse-wizard__steps">
+              <div class="acuse-step acuse-step--active" data-step="1"><div class="acuse-step__circle"><span class="acuse-step__number">1</span><span class="acuse-step__check">OK</span></div><div class="acuse-step__body"><div class="acuse-step__title">Datos</div><div class="acuse-step__desc">Fecha, cliente y repartidor</div></div></div>
+              <div class="acuse-step acuse-step--pending" data-step="2"><div class="acuse-step__circle"><span class="acuse-step__number">2</span><span class="acuse-step__check">OK</span></div><div class="acuse-step__body"><div class="acuse-step__title">Mercaderias</div><div class="acuse-step__desc">Items del acuse</div></div></div>
+              <div class="acuse-step acuse-step--pending" data-step="3"><div class="acuse-step__circle"><span class="acuse-step__number">3</span><span class="acuse-step__check">OK</span></div><div class="acuse-step__body"><div class="acuse-step__title">Confirmar</div><div class="acuse-step__desc">Resumen visual</div></div></div>
+            </div>
+          </aside>
+          <div class="acuse-wizard__content">
+            <div class="acuse-wizard__header"><div><h2 class="modal__title" id="wizardHeaderTitle">Nuevo Acuse Operativo</h2><p class="acuse-wizard__subtitle">Completa la fecha, el repartidor y los datos del cliente.</p></div><button class="modal__close" type="button" data-close-modal aria-label="Cerrar">&times;</button></div>
+            <div class="acuse-wizard__body">
+              <form>
+                <section class="wizard-panel wizard-panel--active" data-panel="1"><div class="wizard-section-label">Informacion general</div><div class="wizard-grid wizard-grid--2"><div class="wizard-field"><label class="wizard-label">Fecha de emision <span class="wizard-label__req">*</span></label><input class="wizard-input" type="date" value="2026-05-28"></div><div class="wizard-field"><label class="wizard-label">Repartidor</label><div class="combo-field"><div class="acuse-combo__control has-value" tabindex="0" data-combo><span class="acuse-combo__dot"></span><span class="acuse-combo__value">Operador de ejemplo</span><button class="acuse-combo__clear" type="button">x</button><span class="acuse-combo__caret">v</span></div><div class="combo-menu"><div class="combo-menu__search"><input value="Operador"></div><div class="combo-menu__list"><div class="combo-item is-selected">Operador de ejemplo <span>OK</span></div><div class="combo-item">Repartidor demo</div></div></div></div></div></div><div class="wizard-grid wizard-grid--2"><div class="wizard-field"><label class="wizard-label">Cliente <span class="wizard-label__req">*</span></label><input class="wizard-input" value="Cliente de ejemplo S.A."></div><div class="wizard-field"><label class="wizard-label">Ciudad</label><input class="wizard-input wizard-input--readonly-soft" value="Asuncion" readonly></div></div></section>
+                <section class="wizard-panel" data-panel="2"><div class="wizard-section-label">Agregar mercaderia</div><div class="wizard-grid wizard-grid--detail"><div class="wizard-field"><label class="wizard-label">Mercaderia</label><input class="wizard-input" value="Producto de muestra"></div><div class="wizard-field"><label class="wizard-label">UM</label><input class="wizard-input wizard-input--readonly-soft wizard-input--center" value="UN" readonly></div><div class="wizard-field"><label class="wizard-label">Cantidad</label><input class="wizard-input wizard-input--center" value="12"></div></div></section>
+                <section class="wizard-panel" data-panel="3"><div class="wizard-section-label">Confirmacion</div><div class="wizard-summary-card"><div class="wizard-summary-card__title">Datos del acuse</div><div class="wizard-summary-row"><span class="wizard-summary-row__label">Fecha</span><span class="wizard-summary-row__value">28/05/2026</span></div><div class="wizard-summary-row"><span class="wizard-summary-row__label">Cliente</span><span class="wizard-summary-row__value">Cliente de ejemplo S.A.</span></div><div class="wizard-summary-row"><span class="wizard-summary-row__label">Ciudad</span><span class="wizard-summary-row__value">Asuncion</span></div></div></section>
+              </form>
+            </div>
+            <div class="acuse-wizard__footer"><div class="acuse-wizard__progress-track"><div class="acuse-wizard__progress-fill" id="wizardProgress"></div></div><div class="acuse-wizard__footer-left"><button class="btn btn-ghost" type="button" data-close-modal>Cancelar</button><span class="acuse-wizard__counter" id="stepCounter">Paso 1 de 3</span></div><div class="acuse-wizard__footer-actions"><button class="btn btn--secondary" type="button" id="prevStep">Anterior</button><button class="btn btn--primary" type="button" id="nextStep">Siguiente</button></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+    const backdrop=document.getElementById('modalBackdrop');
+    const steps=[...document.querySelectorAll('.acuse-step')];
+    const panels=[...document.querySelectorAll('.wizard-panel')];
+    const progress=document.getElementById('wizardProgress');
+    const counter=document.getElementById('stepCounter');
+    const prev=document.getElementById('prevStep');
+    const next=document.getElementById('nextStep');
+    let current=1;
+    function openModal(){backdrop.classList.remove('is-closing');backdrop.classList.add('is-open')}
+    function closeModal(){backdrop.classList.remove('is-open');backdrop.classList.add('is-closing');setTimeout(()=>backdrop.classList.remove('is-closing'),430)}
+    function renderStep(){
+      steps.forEach((step,i)=>{const n=i+1;step.classList.toggle('acuse-step--active',n===current);step.classList.toggle('acuse-step--completed',n<current);step.classList.toggle('acuse-step--pending',n>current)});
+      panels.forEach(panel=>panel.classList.toggle('wizard-panel--active',Number(panel.dataset.panel)===current));
+      progress.style.width=(current/3*100)+'%';counter.textContent='Paso '+current+' de 3';prev.style.display=current===1?'none':'inline-flex';next.textContent=current===3?'Cerrar visual':'Siguiente';
+    }
+    document.querySelectorAll('[data-open-modal]').forEach(btn=>btn.addEventListener('click',openModal));
+    document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',closeModal));
+    backdrop.addEventListener('click',event=>{if(event.target===backdrop)closeModal()});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&backdrop.classList.contains('is-open'))closeModal()});
+    document.querySelectorAll('.sidebar-icon').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.sidebar-icon').forEach(item=>item.classList.remove('active'));btn.classList.add('active')}));
+    document.querySelectorAll('[data-combo]').forEach(control=>control.addEventListener('click',()=>{const menu=control.parentElement.querySelector('.combo-menu');control.classList.toggle('is-open');menu.classList.toggle('combo-menu--open')}));
+    prev.addEventListener('click',()=>{current=Math.max(1,current-1);renderStep()});
+    next.addEventListener('click',()=>{if(current===3){closeModal();current=1;setTimeout(renderStep,430);return}current=Math.min(3,current+1);renderStep()});
+    renderStep();
+  </script>
+</body>
+</html>
+
+

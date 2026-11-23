@@ -1,0 +1,23 @@
+{
+  "name": "recepcion-de-mercaderias",
+  "version": "1.0.0",
+  "description": "Sistema de Recepción de Mercaderías",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fs": "^0.0.1-security",
+    "multer": "^1.4.5-lts.1",
+    "path": "^0.12.7",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+
+# Base SQLite: es estado de ejecución, no código. Los archivos -wal y -shm son
+# el diario y el bloqueo de la conexión abierta, así que una copia tomada en
+# caliente queda inconsistente. Para versionar los datos hace falta un volcado
+# (sqlite3 data/recepcion.db ".backup copia.db"), no el archivo vivo.
+data/
+uploads/
+
+*.log
+*.bak
+tmp_*
+.DS_Store
+Thumbs.db

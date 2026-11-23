@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.log
+*.bak
+*.bak*
+server-runtime*.log
+npm-debug.log*
+tmp_*
+.claude/
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
