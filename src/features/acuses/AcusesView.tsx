@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  BarChart3, ClipboardCheck, CalendarDays, Users, Clock, type LucideIcon,
-} from 'lucide-react';
+import { BarChart3, ClipboardCheck, Clock, type LucideIcon } from 'lucide-react';
 import { useSession } from '@/store/session';
 import { SegStrip } from '@/components/SegStrip';
 
@@ -10,11 +8,12 @@ const ACUSE_SB_URL = 'https://fdcumrdbnrjpbfbrxqiw.supabase.co';
 const ACUSE_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkY3VtcmRibnJqcGJmYnJ4cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTU1NjAsImV4cCI6MjA5OTYzMTU2MH0.YHsYBm-pnzu53BiZFikQef4CEYDzxGoToL_J4iH1wgY';
 
 interface Tab { v: string; label: string; icon: LucideIcon }
+/* Acuses primero: es la pantalla con la que se trabaja. Las vistas de
+   Calendario y Repartidores del proyecto embebido quedan fuera de la tira;
+   siguen existiendo adentro, pero ya no se entra a ellas desde acá. */
 const TABS: Tab[] = [
-  { v: 'resumen', label: 'Dashboard Resumen', icon: BarChart3 },
   { v: 'acuses', label: 'Acuses', icon: ClipboardCheck },
-  { v: 'calendario', label: 'Calendario', icon: CalendarDays },
-  { v: 'repartidores', label: 'Repartidores', icon: Users },
+  { v: 'resumen', label: 'Resumen', icon: BarChart3 },
   { v: 'historial', label: 'Historial', icon: Clock },
 ];
 
