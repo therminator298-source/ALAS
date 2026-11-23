@@ -2,10 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, ClipboardCheck, Clock, type LucideIcon } from 'lucide-react';
 import { useSession } from '@/store/session';
 import { SegStrip } from '@/components/SegStrip';
+import { AcusesList } from './AcusesList';
 
 // Proyecto Supabase de Acuses. La anon key es pública por diseño (RLS anon, gate = SSO).
 const ACUSE_SB_URL = 'https://fdcumrdbnrjpbfbrxqiw.supabase.co';
 const ACUSE_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkY3VtcmRibnJqcGJmYnJ4cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNTU1NjAsImV4cCI6MjA5OTYzMTU2MH0.YHsYBm-pnzu53BiZFikQef4CEYDzxGoToL_J4iH1wgY';
+
+/* Apartados ya reescritos en React. Los que faltan siguen saliendo del iframe. */
+const NATIVAS = new Set(['acuses']);
 
 interface Tab { v: string; label: string; icon: LucideIcon }
 /* Acuses primero: es la pantalla con la que se trabaja. Las vistas de
@@ -91,14 +95,21 @@ export function AcusesView() {
         <div className="hidden md:block md:flex-1" />
       </div>
 
-      {/* App ACUSE embebida */}
-      <iframe
-        ref={iframeRef}
-        src={src}
-        title="Acuses"
-        className="flex-1 min-h-0 w-full border-0 block bg-white"
-        allow="clipboard-write"
-      />
+      {/* Lo nativo cuando existe; el iframe solo para lo que falta migrar.
+          Montarlo condicionalmente es lo que ahorra su copia de supabase-js. */}
+      {NATIVAS.has(active) ? (
+        <div className="flex-1 min-h-0 overflow-auto">
+          <AcusesList />
+        </div>
+      ) : (
+        <iframe
+          ref={iframeRef}
+          src={src}
+          title="Acuses"
+          className="flex-1 min-h-0 w-full border-0 block bg-white"
+          allow="clipboard-write"
+        />
+      )}
     </div>
   );
 }

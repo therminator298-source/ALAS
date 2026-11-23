@@ -20,7 +20,14 @@ export function fmtDateTime(iso: string | null | undefined): string {
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
-  const d = new Date(iso);
+  /* Una fecha sola ('2026-09-07', como vienen las columnas `date` de Postgres)
+     la trata el navegador como medianoche UTC, asi que en Paraguay (UTC-3) caia
+     en el dia anterior: 06/09/2026. Se arma como fecha local. Los timestamps
+     con hora y zona siguen el camino de siempre. */
+  const sola = /^\d{4}-\d{2}-\d{2}$/.exec(iso);
+  const d = sola
+    ? new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
+    : new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
