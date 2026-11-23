@@ -10,6 +10,7 @@ import { SkeletonTable } from '@/components/ui/SkeletonTable';
 import { toast } from '@/components/ui/toast';
 import { cn, fmtDate } from '@/lib/utils';
 import { AcuseEstadoBadge } from './AcuseEstadoBadge';
+import { AcuseDetalleModal } from './AcuseDetalleModal';
 import { AcuseFormModal } from './AcuseFormModal';
 import { downloadAcusesCsv, getAcuseDashboard, listAcuses, listRepartidores } from './acuseApi';
 import type { AcuseEstado, AcuseFilters, AcuseRow, Repartidor } from './types';
@@ -47,6 +48,7 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
   const [exportando, setExportando] = useState(false);
   const [formAbierto, setFormAbierto] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [detalleId, setDetalleId] = useState<number | null>(null);
   // Se incrementa al guardar: vuelve a pedir filas y contadores.
   const [refresco, setRefresco] = useState(0);
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
@@ -240,7 +242,7 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
                 <tr
                   key={a.id}
                   data-row
-                  onClick={() => { if (onVerDetalle) { onVerDetalle(a); return; } setEditId(a.id); setFormAbierto(true); }}
+                  onClick={() => { if (onVerDetalle) { onVerDetalle(a); return; } setDetalleId(a.id); }}
                   className="h-[52px] transition-colors hover:bg-surface-3 cursor-pointer"
                   title="Abrir el acuse"
                 >
@@ -295,6 +297,14 @@ export function AcusesList({ onVerDetalle }: { onVerDetalle?: (a: AcuseRow) => v
           </div>
         )}
       </div>
+
+      <AcuseDetalleModal
+        open={detalleId != null}
+        acuseId={detalleId}
+        onClose={() => setDetalleId(null)}
+        onEditar={(id) => { setDetalleId(null); setEditId(id); setFormAbierto(true); }}
+        onChanged={() => setRefresco((n) => n + 1)}
+      />
 
       <AcuseFormModal
         open={formAbierto}
